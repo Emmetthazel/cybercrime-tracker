@@ -1,0 +1,339 @@
+@startuml Cybercrime Tracker - Use Case Diagram
+
+!define ADMIN_COLOR #FF6B6B
+!define ANALYST_COLOR #4ECDC4
+!define EXTERNAL_COLOR #95E1D3
+!define SYSTEM_COLOR #F38181
+
+left to right direction
+
+' ===== ACTEURS =====
+actor "Administrateur Système" as Admin ADMIN_COLOR
+actor "Analyste Sécurité" as Analyst ANALYST_COLOR
+actor "Utilisateur Standard" as User
+actor "API Externe\n(VirusTotal, AbuseIPDB)" as ExternalAPI EXTERNAL_COLOR
+actor "Système de Synchronisation" as SyncSystem SYSTEM_COLOR
+
+' ===== PACKAGES DE CAS D'UTILISATION =====
+
+package "Gestion des Incidents" {
+    usecase "Créer un incident" as UC1
+    usecase "Consulter les incidents" as UC2
+    usecase "Modifier un incident" as UC3
+    usecase "Supprimer un incident" as UC4
+    usecase "Rechercher des incidents" as UC5
+    usecase "Filtrer par type d'attaque" as UC6
+    usecase "Filtrer par gravité" as UC7
+    usecase "Filtrer par pays" as UC8
+    usecase "Filtrer par période" as UC9
+    usecase "Importer des incidents en masse" as UC10
+    usecase "Exporter des incidents" as UC11
+    usecase "Lier des incidents connexes" as UC12
+    usecase "Ajouter des preuves" as UC13
+    usecase "Mettre à jour le statut" as UC14
+    usecase "Ajouter actions de mitigation" as UC15
+}
+
+package "Gestion des IPs Suspectes" {
+    usecase "Ajouter une IP suspecte" as UC20
+    usecase "Consulter les IPs" as UC21
+    usecase "Enrichir les données IP" as UC22
+    usecase "Mettre en liste noire" as UC23
+    usecase "Calculer score de menace" as UC24
+    usecase "Voir historique d'attaques" as UC25
+    usecase "Géolocaliser une IP" as UC26
+    usecase "Consulter WHOIS" as UC27
+    usecase "Identifier IPs dangereuses" as UC28
+}
+
+package "Analyse et Statistiques" {
+    usecase "Consulter tableau de bord" as UC30
+    usecase "Voir tendances d'attaques" as UC31
+    usecase "Analyser types d'attaques" as UC32
+    usecase "Analyser pays ciblés" as UC33
+    usecase "Analyser distribution gravité" as UC34
+    usecase "Identifier patterns d'attaque" as UC35
+    usecase "Prédire prochaine attaque" as UC36
+    usecase "Calculer score de risque" as UC37
+    usecase "Corréler incidents" as UC38
+    usecase "Générer insights" as UC39
+}
+
+package "Rapports et Export" {
+    usecase "Générer un rapport" as UC40
+    usecase "Consulter rapports existants" as UC41
+    usecase "Exporter en PDF" as UC42
+    usecase "Exporter en CSV" as UC43
+    usecase "Exporter en Excel" as UC44
+    usecase "Exporter en JSON" as UC45
+    usecase "Planifier rapport automatique" as UC46
+    usecase "Personnaliser rapport" as UC47
+    usecase "Partager rapport" as UC48
+}
+
+package "Alertes et Notifications" {
+    usecase "Créer une alerte" as UC50
+    usecase "Consulter alertes" as UC51
+    usecase "Accuser réception alerte" as UC52
+    usecase "Résoudre une alerte" as UC53
+    usecase "Configurer notifications" as UC54
+    usecase "Escalader une alerte" as UC55
+    usecase "Recevoir notification email" as UC56
+    usecase "Recevoir notification SMS" as UC57
+    usecase "Recevoir notification push" as UC58
+}
+
+package "Gestion des Utilisateurs" {
+    usecase "S'authentifier" as UC60
+    usecase "Se déconnecter" as UC61
+    usecase "Créer un utilisateur" as UC62
+    usecase "Modifier un utilisateur" as UC63
+    usecase "Supprimer un utilisateur" as UC64
+    usecase "Changer mot de passe" as UC65
+    usecase "Réinitialiser mot de passe" as UC66
+    usecase "Gérer les rôles" as UC67
+    usecase "Gérer les permissions" as UC68
+    usecase "Consulter logs d'audit" as UC69
+}
+
+package "Intelligence des Menaces" {
+    usecase "Consulter threat intelligence" as UC70
+    usecase "Ajouter indicateur de menace" as UC71
+    usecase "Corréler avec attaques" as UC72
+    usecase "Mettre à jour confiance" as UC73
+    usecase "Identifier TTPs" as UC74
+    usecase "Consulter malwares associés" as UC75
+    usecase "Suivre acteurs malveillants" as UC76
+}
+
+package "Gestion des Vulnérabilités" {
+    usecase "Consulter vulnérabilités" as UC80
+    usecase "Ajouter CVE" as UC81
+    usecase "Lier vulnérabilité à attaque" as UC82
+    usecase "Vérifier exploits disponibles" as UC83
+    usecase "Vérifier patchs disponibles" as UC84
+    usecase "Identifier systèmes affectés" as UC85
+}
+
+package "Sources de Données" {
+    usecase "Configurer source de données" as UC90
+    usecase "Synchroniser source" as UC91
+    usecase "Synchroniser toutes sources" as UC92
+    usecase "Consulter statistiques sources" as UC93
+    usecase "Activer/Désactiver source" as UC94
+    usecase "Valider données importées" as UC95
+    usecase "Dédupliquer données" as UC96
+    usecase "Transformer format données" as UC97
+}
+
+package "Visualisation" {
+    usecase "Voir carte géographique" as UC100
+    usecase "Voir graphiques statistiques" as UC101
+    usecase "Voir timeline d'attaques" as UC102
+    usecase "Voir distribution par type" as UC103
+    usecase "Voir top menaces" as UC104
+    usecase "Personnaliser dashboard" as UC105
+}
+
+' ===== RELATIONS ACTEURS -> CAS D'UTILISATION =====
+
+' Admin - Tous les droits
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC10
+Admin --> UC62
+Admin --> UC63
+Admin --> UC64
+Admin --> UC67
+Admin --> UC68
+Admin --> UC69
+Admin --> UC90
+Admin --> UC91
+Admin --> UC92
+Admin --> UC94
+
+' Analyst - Analyse et gestion quotidienne
+Analyst --> UC1
+Analyst --> UC2
+Analyst --> UC3
+Analyst --> UC5
+Analyst --> UC6
+Analyst --> UC7
+Analyst --> UC8
+Analyst --> UC9
+Analyst --> UC11
+Analyst --> UC12
+Analyst --> UC13
+Analyst --> UC14
+Analyst --> UC15
+Analyst --> UC20
+Analyst --> UC21
+Analyst --> UC22
+Analyst --> UC23
+Analyst --> UC24
+Analyst --> UC25
+Analyst --> UC28
+Analyst --> UC30
+Analyst --> UC31
+Analyst --> UC32
+Analyst --> UC33
+Analyst --> UC34
+Analyst --> UC35
+Analyst --> UC38
+Analyst --> UC39
+Analyst --> UC40
+Analyst --> UC41
+Analyst --> UC42
+Analyst --> UC43
+Analyst --> UC50
+Analyst --> UC51
+Analyst --> UC52
+Analyst --> UC53
+Analyst --> UC55
+Analyst --> UC70
+Analyst --> UC71
+Analyst --> UC72
+Analyst --> UC73
+Analyst --> UC74
+Analyst --> UC80
+Analyst --> UC81
+Analyst --> UC82
+Analyst --> UC100
+Analyst --> UC101
+Analyst --> UC102
+Analyst --> UC103
+Analyst --> UC104
+
+' User - Consultation et création basique
+User --> UC1
+User --> UC2
+User --> UC5
+User --> UC21
+User --> UC30
+User --> UC41
+User --> UC51
+User --> UC60
+User --> UC61
+User --> UC65
+User --> UC100
+User --> UC101
+
+' API Externe
+ExternalAPI --> UC22
+ExternalAPI --> UC26
+ExternalAPI --> UC27
+ExternalAPI --> UC71
+ExternalAPI --> UC75
+ExternalAPI --> UC81
+
+' Système de Synchronisation
+SyncSystem --> UC91
+SyncSystem --> UC92
+SyncSystem --> UC95
+SyncSystem --> UC96
+SyncSystem --> UC46
+SyncSystem --> UC56
+SyncSystem --> UC57
+SyncSystem --> UC58
+
+' ===== EXTENSIONS ET INCLUSIONS =====
+
+' Extensions de filtrage
+UC5 ..> UC6 : <<extend>>
+UC5 ..> UC7 : <<extend>>
+UC5 ..> UC8 : <<extend>>
+UC5 ..> UC9 : <<extend>>
+
+' Inclusions pour authentification
+UC1 ..> UC60 : <<include>>
+UC3 ..> UC60 : <<include>>
+UC4 ..> UC60 : <<include>>
+UC10 ..> UC60 : <<include>>
+UC62 ..> UC60 : <<include>>
+
+' Inclusions pour enrichissement IP
+UC20 ..> UC22 : <<include>>
+UC22 ..> UC26 : <<include>>
+UC22 ..> UC27 : <<include>>
+
+' Inclusions pour calculs
+UC28 ..> UC24 : <<include>>
+UC31 ..> UC30 : <<include>>
+UC32 ..> UC30 : <<include>>
+UC33 ..> UC30 : <<include>>
+UC34 ..> UC30 : <<include>>
+
+' Inclusions pour exports
+UC42 ..> UC40 : <<include>>
+UC43 ..> UC40 : <<include>>
+UC44 ..> UC40 : <<include>>
+UC45 ..> UC40 : <<include>>
+
+' Extensions pour notifications
+UC50 ..> UC56 : <<extend>>
+UC50 ..> UC57 : <<extend>>
+UC50 ..> UC58 : <<extend>>
+UC52 ..> UC56 : <<extend>>
+UC53 ..> UC56 : <<extend>>
+
+' Inclusions pour synchronisation
+UC91 ..> UC95 : <<include>>
+UC91 ..> UC96 : <<include>>
+UC91 ..> UC97 : <<include>>
+UC92 ..> UC91 : <<include>>
+
+' Extensions pour audit
+UC62 ..> UC69 : <<extend>>
+UC63 ..> UC69 : <<extend>>
+UC64 ..> UC69 : <<extend>>
+UC67 ..> UC69 : <<extend>>
+
+' Corrélations et analyses avancées
+UC35 ..> UC38 : <<include>>
+UC36 ..> UC35 : <<include>>
+UC36 ..> UC37 : <<include>>
+UC72 ..> UC38 : <<include>>
+
+' Visualisations basées sur analyses
+UC100 ..> UC33 : <<include>>
+UC101 ..> UC31 : <<include>>
+UC102 ..> UC31 : <<include>>
+UC103 ..> UC32 : <<include>>
+UC104 ..> UC28 : <<include>>
+
+note right of Admin
+  Administrateur avec tous les droits :
+  - Gestion complète du système
+  - Configuration des sources
+  - Gestion des utilisateurs
+  - Accès aux logs d'audit
+end note
+
+note right of Analyst
+  Analyste sécurité principal :
+  - Gestion quotidienne des incidents
+  - Analyse approfondie des menaces
+  - Création de rapports
+  - Gestion des alertes
+end note
+
+note bottom of ExternalAPI
+  APIs tierces pour enrichissement :
+  - VirusTotal : analyse malwares
+  - AbuseIPDB : réputation IPs
+  - Shodan : scan réseau
+  - OTX AlienVault : threat intel
+end note
+
+note bottom of SyncSystem
+  Système automatisé qui :
+  - Synchronise les sources externes
+  - Déduplique les données
+  - Planifie les rapports
+  - Envoie les notifications
+end note
+
+@enduml
+

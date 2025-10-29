@@ -10,12 +10,42 @@ A comprehensive platform for collecting, analyzing, and visualizing cyberattack 
 - Most active attacker IPs
 - Attack trends over time
 
+## 📐 UML Diagrams
+
+This project includes comprehensive UML diagrams for architecture and requirements:
+
+### Available Diagrams
+- **📊 Class Diagram** (`class-diagram.puml`) - Complete architecture with 9 MongoDB collections, controllers, services
+- **👥 Use Case Diagram** (`usecase-diagram.puml`) - 5 actors, 10 functional packages, 100+ use cases
+
+### Documentation
+- **📘 UML Guide** (`UML-GUIDE.md`) - Complete guide (50+ pages) explaining diagrams and generation
+- **📗 Database Schema** (`DATABASE-SCHEMA.md`) - Detailed MongoDB schemas (80+ pages)
+- **📙 Quick Summary** (`UML-SUMMARY.md`) - Quick 5-minute overview
+
+### Generate Diagrams
+```bash
+# Windows: Double-click or run in terminal
+generate-diagrams.bat
+
+# The script will:
+# 1. Download PlantUML if needed
+# 2. Generate SVG and PNG files
+# 3. Open the output folder
+```
+
+**Output:** `output/class-diagram.svg`, `output/usecase-diagram.svg` (and PNG versions)
+
+**Online Viewer:** http://www.plantuml.com/plantuml/uml/ (paste .puml content)
+
+---
+
 ## ⚙️ Tech Stack
 
-- **Database:** MongoDB (NoSQL)
+- **Database:** MongoDB (NoSQL) - 9 collections, 1.5M+ documents estimated
 - **Backend:** Node.js + Express
 - **Frontend:** React (optional dashboard)
-- **APIs:** Integration with VirusTotal, AbuseIPDB
+- **APIs:** Integration with VirusTotal, AbuseIPDB, Shodan, OTX
 - **Visualization:** Chart.js or Recharts
 
 ## 🗂️ Database Design (MongoDB Collections)

@@ -1,0 +1,510 @@
+@startuml Cybercrime Tracker - Class Diagram
+
+!define MONGODB_COLOR #47A248
+!define CONTROLLER_COLOR #68A063
+!define SERVICE_COLOR #FFA500
+!define UTIL_COLOR #87CEEB
+
+' ===== MONGODB COLLECTIONS / MODELS =====
+package "Database Layer (MongoDB)" MONGODB_COLOR {
+    
+    class Attack {
+        - _id: ObjectId
+        - type: String
+        - source_ip: String
+        - target_country: String
+        - target_org: String
+        - target_sector: String
+        - date: Date
+        - severity: String
+        - description: String
+        - status: String
+        - reported_by: ObjectId
+        - tags: Array<String>
+        - affected_systems: Array<String>
+        - data_loss: Number
+        - financial_impact: Number
+        - mitigation_actions: Array<Object>
+        - related_attacks: Array<ObjectId>
+        - evidence_files: Array<String>
+        - created_at: Date
+        - updated_at: Date
+        --
+        + findByType(type: String)
+        + findBySeverity(severity: String)
+        + findByCountry(country: String)
+        + findByDateRange(start: Date, end: Date)
+        + getRelatedAttacks()
+        + addMitigationAction(action: Object)
+        + updateStatus(status: String)
+    }
+
+    class IP {
+        - _id: ObjectId
+        - ip_address: String
+        - country: String
+        - city: String
+        - isp: String
+        - organization: String
+        - reported_count: Number
+        - last_report: Date
+        - first_seen: Date
+        - threat_score: Number
+        - reputation_score: Number
+        - is_blacklisted: Boolean
+        - blacklist_sources: Array<String>
+        - attacks: Array<ObjectId>
+        - geolocation: Object
+        - whois_data: Object
+        - associated_domains: Array<String>
+        - malware_families: Array<String>
+        - created_at: Date
+        - updated_at: Date
+        --
+        + incrementReportCount()
+        + updateThreatScore(score: Number)
+        + addToBlacklist(source: String)
+        + getAttackHistory()
+        + enrichFromAPI(api: String)
+        + calculateRiskLevel()
+    }
+
+    class Source {
+        - _id: ObjectId
+        - name: String
+        - type: String
+        - api_endpoint: String
+        - api_key: String
+        - last_sync: Date
+        - next_sync: Date
+        - sync_interval: Number
+        - records_collected: Number
+        - is_active: Boolean
+        - reliability_score: Number
+        - error_count: Number
+        - last_error: String
+        - configuration: Object
+        - rate_limit: Number
+        - created_at: Date
+        - updated_at: Date
+        --
+        + syncData()
+        + updateLastSync(date: Date)
+        + incrementRecordsCollected(count: Number)
+        + handleError(error: String)
+        + validateAPIKey()
+        + checkRateLimit()
+    }
+
+    class User {
+        - _id: ObjectId
+        - username: String
+        - email: String
+        - password: String
+        - full_name: String
+        - role: String
+        - organization: String
+        - department: String
+        - phone: String
+        - is_active: Boolean
+        - last_login: Date
+        - created_at: Date
+        - updated_at: Date
+        - permissions: Array<String>
+        - notification_preferences: Object
+        - api_token: String
+        - failed_login_attempts: Number
+        --
+        + authenticate(password: String)
+        + generateToken()
+        + hasPermission(permission: String)
+        + updateLastLogin()
+        + changePassword(newPassword: String)
+        + resetPassword()
+    }
+
+    class Report {
+        - _id: ObjectId
+        - title: String
+        - type: String
+        - generated_by: ObjectId
+        - date_range_start: Date
+        - date_range_end: Date
+        - filters: Object
+        - attacks_included: Array<ObjectId>
+        - statistics: Object
+        - charts_data: Object
+        - generated_at: Date
+        - file_path: String
+        - format: String
+        - status: String
+        --
+        + generate()
+        + exportToPDF()
+        + exportToCSV()
+        + exportToJSON()
+        + addChart(chart: Object)
+        + calculateStatistics()
+    }
+
+    class Alert {
+        - _id: ObjectId
+        - type: String
+        - severity: String
+        - title: String
+        - description: String
+        - triggered_by: ObjectId
+        - related_attack: ObjectId
+        - related_ip: ObjectId
+        - triggered_at: Date
+        - acknowledged: Boolean
+        - acknowledged_by: ObjectId
+        - acknowledged_at: Date
+        - action_taken: String
+        - notes: String
+        - recipients: Array<ObjectId>
+        --
+        + trigger()
+        + acknowledge(user: ObjectId)
+        + sendNotification()
+        + escalate()
+        + resolve()
+    }
+
+    class ThreatIntelligence {
+        - _id: ObjectId
+        - indicator: String
+        - indicator_type: String
+        - threat_type: String
+        - confidence_level: Number
+        - source: String
+        - first_seen: Date
+        - last_seen: Date
+        - is_active: Boolean
+        - tags: Array<String>
+        - description: String
+        - related_malware: Array<String>
+        - ttps: Array<String>
+        - references: Array<String>
+        - created_at: Date
+        - updated_at: Date
+        --
+        + matchAttack(attack: ObjectId)
+        + updateConfidence(level: Number)
+        + addReference(ref: String)
+        + checkExpiration()
+    }
+
+    class Vulnerability {
+        - _id: ObjectId
+        - cve_id: String
+        - title: String
+        - description: String
+        - severity: String
+        - cvss_score: Number
+        - affected_systems: Array<String>
+        - exploit_available: Boolean
+        - patch_available: Boolean
+        - published_date: Date
+        - last_modified: Date
+        - related_attacks: Array<ObjectId>
+        - vendor: String
+        - products: Array<String>
+        - references: Array<String>
+        --
+        + getExploitDetails()
+        + getPatchInfo()
+        + checkAffectedSystems()
+        + linkToAttack(attack: ObjectId)
+    }
+
+    class AuditLog {
+        - _id: ObjectId
+        - user_id: ObjectId
+        - action: String
+        - entity_type: String
+        - entity_id: ObjectId
+        - changes: Object
+        - ip_address: String
+        - user_agent: String
+        - timestamp: Date
+        - status: String
+        --
+        + log(action: String, entity: Object)
+        + getHistory(entityId: ObjectId)
+        + filterByUser(userId: ObjectId)
+        + filterByDate(start: Date, end: Date)
+    }
+}
+
+' ===== CONTROLLERS =====
+package "Controllers Layer" CONTROLLER_COLOR {
+    
+    class AttackController {
+        + getAllAttacks(req, res)
+        + getAttackById(req, res)
+        + createAttack(req, res)
+        + updateAttack(req, res)
+        + deleteAttack(req, res)
+        + getAttacksByType(req, res)
+        + getAttacksBySeverity(req, res)
+        + getAttacksByCountry(req, res)
+        + getAttacksByDateRange(req, res)
+        + getAttackStatistics(req, res)
+        + searchAttacks(req, res)
+        + bulkImport(req, res)
+    }
+
+    class IPController {
+        + getAllIPs(req, res)
+        + getIPById(req, res)
+        + createIP(req, res)
+        + updateIP(req, res)
+        + deleteIP(req, res)
+        + getMostDangerousIPs(req, res)
+        + getIPsByCountry(req, res)
+        + getBlacklistedIPs(req, res)
+        + enrichIPData(req, res)
+        + getIPAttackHistory(req, res)
+    }
+
+    class SourceController {
+        + getAllSources(req, res)
+        + getSourceById(req, res)
+        + createSource(req, res)
+        + updateSource(req, res)
+        + deleteSource(req, res)
+        + syncSource(req, res)
+        + syncAllSources(req, res)
+        + getSourceStatistics(req, res)
+    }
+
+    class UserController {
+        + getAllUsers(req, res)
+        + getUserById(req, res)
+        + createUser(req, res)
+        + updateUser(req, res)
+        + deleteUser(req, res)
+        + login(req, res)
+        + logout(req, res)
+        + changePassword(req, res)
+        + resetPassword(req, res)
+    }
+
+    class ReportController {
+        + getAllReports(req, res)
+        + getReportById(req, res)
+        + generateReport(req, res)
+        + deleteReport(req, res)
+        + exportReport(req, res)
+        + scheduleReport(req, res)
+    }
+
+    class AlertController {
+        + getAllAlerts(req, res)
+        + getAlertById(req, res)
+        + createAlert(req, res)
+        + acknowledgeAlert(req, res)
+        + resolveAlert(req, res)
+        + getUnacknowledgedAlerts(req, res)
+    }
+
+    class DashboardController {
+        + getOverview(req, res)
+        + getAttackTrends(req, res)
+        + getTopAttackTypes(req, res)
+        + getAttacksByCountry(req, res)
+        + getSeverityDistribution(req, res)
+        + getRecentIncidents(req, res)
+        + getTopThreats(req, res)
+    }
+}
+
+' ===== SERVICES =====
+package "Services Layer" SERVICE_COLOR {
+    
+    class AnalyticsService {
+        + calculateAttackTrends(dateRange: Object)
+        + getTopAttackTypes(limit: Number)
+        + getMostTargetedCountries(limit: Number)
+        + getMostActiveThreatActors(limit: Number)
+        + predictNextAttack(data: Object)
+        + generateInsights(timeframe: String)
+        + calculateRiskScore(entity: Object)
+    }
+
+    class ThreatIntelService {
+        + enrichAttackData(attack: Object)
+        + checkThreatIndicators(attack: Object)
+        + getLatestThreats()
+        + correlateAttacks(attacks: Array)
+        + identifyAttackPatterns(attacks: Array)
+    }
+
+    class ExternalAPIService {
+        + fetchFromVirusTotal(indicator: String)
+        + fetchFromAbuseIPDB(ip: String)
+        + fetchFromShodan(ip: String)
+        + fetchFromOTX(indicator: String)
+        + enrichIPData(ip: String)
+        + validateAPIResponse(response: Object)
+    }
+
+    class NotificationService {
+        + sendEmail(to: String, subject: String, body: String)
+        + sendSMS(phone: String, message: String)
+        + sendPushNotification(user: ObjectId, message: String)
+        + notifyAdmins(alert: Object)
+        + sendReportNotification(report: Object)
+    }
+
+    class DataSyncService {
+        + syncFromSource(source: ObjectId)
+        + syncAllSources()
+        + deduplicateData(collection: String)
+        + validateData(data: Object)
+        + transformData(data: Object, format: String)
+        + scheduleSync(source: ObjectId, interval: Number)
+    }
+
+    class ExportService {
+        + exportToCSV(data: Array, filename: String)
+        + exportToPDF(report: Object, filename: String)
+        + exportToJSON(data: Object, filename: String)
+        + exportToExcel(data: Array, filename: String)
+        + generateVisualization(data: Object, type: String)
+    }
+
+    class AuthService {
+        + authenticateUser(username: String, password: String)
+        + generateJWT(user: Object)
+        + verifyJWT(token: String)
+        + hashPassword(password: String)
+        + validatePassword(password: String, hash: String)
+        + refreshToken(token: String)
+    }
+}
+
+' ===== UTILITIES =====
+package "Utilities" UTIL_COLOR {
+    
+    class ValidationUtil {
+        + validateIP(ip: String)
+        + validateEmail(email: String)
+        + validateDate(date: String)
+        + validateAttackType(type: String)
+        + validateSeverity(severity: String)
+    }
+
+    class LoggerUtil {
+        + info(message: String)
+        + error(message: String, error: Object)
+        + warn(message: String)
+        + debug(message: String)
+        + logToFile(message: String)
+    }
+
+    class CacheUtil {
+        + get(key: String)
+        + set(key: String, value: Object, ttl: Number)
+        + delete(key: String)
+        + clear()
+        + exists(key: String)
+    }
+
+    class ConfigUtil {
+        + getDatabaseConfig()
+        + getAPIConfig(apiName: String)
+        + getEmailConfig()
+        + getSecurityConfig()
+    }
+}
+
+' ===== RELATIONSHIPS =====
+
+' Models relationships
+Attack "1" --> "1" User : reported_by
+Attack "1" --> "0..*" Attack : related_attacks
+Attack "1" --> "1" IP : source_ip
+IP "1" --> "0..*" Attack : attacks
+Report "1" --> "1" User : generated_by
+Report "1" --> "0..*" Attack : attacks_included
+Alert "1" --> "1" User : triggered_by
+Alert "1" --> "0..1" Attack : related_attack
+Alert "1" --> "0..1" IP : related_ip
+Alert "1" --> "0..1" User : acknowledged_by
+ThreatIntelligence "0..*" --> "0..*" Attack : related
+Vulnerability "0..*" --> "0..*" Attack : related_attacks
+AuditLog "1" --> "1" User : user_id
+
+' Controllers use Models
+AttackController ..> Attack : uses
+IPController ..> IP : uses
+SourceController ..> Source : uses
+UserController ..> User : uses
+ReportController ..> Report : uses
+AlertController ..> Alert : uses
+DashboardController ..> Attack : uses
+DashboardController ..> IP : uses
+
+' Controllers use Services
+AttackController ..> AnalyticsService : uses
+AttackController ..> ThreatIntelService : uses
+AttackController ..> NotificationService : uses
+IPController ..> ExternalAPIService : uses
+IPController ..> ThreatIntelService : uses
+SourceController ..> DataSyncService : uses
+SourceController ..> ExternalAPIService : uses
+UserController ..> AuthService : uses
+UserController ..> NotificationService : uses
+ReportController ..> ExportService : uses
+ReportController ..> AnalyticsService : uses
+AlertController ..> NotificationService : uses
+DashboardController ..> AnalyticsService : uses
+
+' Services use Models
+AnalyticsService ..> Attack : analyzes
+AnalyticsService ..> IP : analyzes
+ThreatIntelService ..> ThreatIntelligence : uses
+ThreatIntelService ..> Attack : enriches
+ExternalAPIService ..> IP : enriches
+DataSyncService ..> Source : syncs
+DataSyncService ..> Attack : imports
+ExportService ..> Report : exports
+AuthService ..> User : authenticates
+
+' Services use Utilities
+AnalyticsService ..> CacheUtil : uses
+ExternalAPIService ..> LoggerUtil : uses
+ExternalAPIService ..> ConfigUtil : uses
+DataSyncService ..> ValidationUtil : uses
+DataSyncService ..> LoggerUtil : uses
+AuthService ..> ConfigUtil : uses
+
+note right of Attack
+  Collection principale contenant
+  tous les incidents de cybersécurité
+  avec des détails complets et des
+  relations avec d'autres entités
+end note
+
+note right of IP
+  Tracking complet des IPs suspectes
+  avec enrichissement via APIs externes
+  et calcul automatique de scores
+end note
+
+note right of ThreatIntelligence
+  Intelligence sur les menaces
+  avec corrélation automatique
+  aux attaques détectées
+end note
+
+note bottom of AnalyticsService
+  Service d'analyse avancée
+  avec agrégations MongoDB et
+  algorithmes de détection de patterns
+end note
+
+@enduml
+
