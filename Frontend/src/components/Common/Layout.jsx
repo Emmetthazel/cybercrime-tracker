@@ -15,6 +15,7 @@ const Layout = ({ children }) => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/search', label: 'Search', icon: '🔍' },
   ];
 
   return (

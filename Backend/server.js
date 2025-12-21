@@ -16,6 +16,7 @@ const sourcesRoutes = require('./routes/sources');
 const reportsRoutes = require('./routes/reports');
 const alertsRoutes = require('./routes/alerts');
 const graphRoutes = require('./routes/graph');
+const searchRoutes = require('./routes/search');
 
 // Initialize Express app
 const app = express();
@@ -130,6 +131,7 @@ app.use('/api/sources', sourcesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/graph', graphRoutes);
+app.use('/api/search', searchRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -145,7 +147,8 @@ app.get('/', (req, res) => {
       sources: '/api/sources',
       reports: '/api/reports',
       alerts: '/api/alerts',
-      graph: '/api/graph'
+      graph: '/api/graph',
+      search: '/api/search'
     }
   });
 });

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './components/Auth/Login';
 import Dashboard from './components/Dashboard/Dashboard';
+import SearchPage from './components/Search/SearchPage';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -22,6 +23,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <PrivateRoute>
+                  <SearchPage />
                 </PrivateRoute>
               }
             />
