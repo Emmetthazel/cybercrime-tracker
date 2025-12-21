@@ -44,8 +44,10 @@ exports.authorize = (...roles) => {
   };
 };
 
-// Check if user has required permission
+// Check if user has required permission (checks role first, then permissions array)
 exports.hasPermission = (...permissions) => {
+  const { roleCan } = require('./rolePermissions');
+  
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -56,16 +58,31 @@ exports.hasPermission = (...permissions) => {
       return next();
     }
 
-    // Check if user has any of the required permissions
-    const hasPermission = permissions.some(permission => 
-      req.user.permissions.includes(permission)
-    );
+    // Check role-based permissions first
+    const hasRolePermission = permissions.some(permission => {
+      const [resource, action] = permission.split(':');
+      if (resource && action) {
+        return roleCan(req.user.role, resource, action);
+      }
+      return false;
+    });
 
-    if (!hasPermission) {
-      return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
+    if (hasRolePermission) {
+      return next();
     }
 
-    next();
+    // Fall back to permissions array (for custom permissions)
+    if (req.user.permissions && req.user.permissions.length > 0) {
+      const hasCustomPermission = permissions.some(permission => 
+        req.user.permissions.includes(permission)
+      );
+
+      if (hasCustomPermission) {
+        return next();
+      }
+    }
+
+    return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
   };
 };
 

@@ -62,9 +62,10 @@ exports.register = async (req, res) => {
       action: 'CREATE',
       resource_type: 'User',
       resource_id: user._id,
-      username: user.username,
+      user_id: req.user?._id || null,
+      username: req.user?.username || user.username,
       ip_address: req.ip,
-      description: `User registered: ${username}`
+      description: req.user ? `Admin ${req.user.username} created user: ${username}` : `User registered: ${username}`
     });
 
     res.status(201).json({

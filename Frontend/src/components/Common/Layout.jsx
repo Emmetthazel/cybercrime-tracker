@@ -13,10 +13,14 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  // Define navigation items based on user role
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/search', label: 'Search', icon: '🔍' },
-  ];
+    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin', 'analyst', 'user', 'viewer'] },
+    { path: '/attacks', label: 'Attacks', icon: '⚔️', roles: ['admin', 'analyst', 'user', 'viewer'] },
+    { path: '/search', label: 'Search', icon: '🔍', roles: ['admin', 'analyst', 'user', 'viewer'] },
+    // Only admin can manage users
+    ...(user?.role === 'admin' ? [{ path: '/users', label: 'Users', icon: '👥', roles: ['admin'] }] : []),
+  ].filter(item => item.roles && item.roles.includes(user?.role));
 
   return (
     <div className="layout">

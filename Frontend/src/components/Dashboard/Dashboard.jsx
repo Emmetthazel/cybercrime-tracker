@@ -160,7 +160,7 @@ const Dashboard = () => {
                               </td>
                               <td>{new Date(attack.date).toLocaleDateString()}</td>
                               <td>
-                                <span className={`status-badge status-${attack.status?.toLowerCase()}`}>
+                                <span className={`status-badge status-${attack.status?.toLowerCase().replace(/\s+/g, '_')}`}>
                                   {attack.status}
                                 </span>
                               </td>

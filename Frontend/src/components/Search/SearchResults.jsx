@@ -74,7 +74,7 @@ const SearchResults = ({ results, loading, error, onAttackClick, onIPClick }) =>
                   </div>
                 </div>
                 <div className="result-card-footer">
-                  <span className={`status-badge status-${attack.status?.toLowerCase()}`}>
+                  <span className={`status-badge status-${attack.status?.toLowerCase().replace(/\s+/g, '_')}`}>
                     {attack.status}
                   </span>
                 </div>

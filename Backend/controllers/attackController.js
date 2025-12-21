@@ -34,8 +34,10 @@ exports.getAllAttacks = async (req, res) => {
       query.$text = { $search: search };
     }
 
+    // Note: All authenticated users (admin, analyst, user, viewer) can view ALL attacks
+    // The role-based restrictions only apply to create, update, and delete operations
     const attacks = await Attack.find(query)
-      .populate('reported_by', 'username full_name')
+      .populate('reported_by', 'username full_name _id')
       .populate('assigned_to', 'username full_name')
       .populate('source_ip_ref', 'ip_address country threat_score')
       .sort({ date: -1 })
@@ -44,6 +46,9 @@ exports.getAllAttacks = async (req, res) => {
       .exec();
 
     const total = await Attack.countDocuments(query);
+
+    // Debug logging (remove in production)
+    console.log(`[getAllAttacks] User: ${req.user?.username} (${req.user?.role}), Query:`, JSON.stringify(query), `Total: ${total}, Returning: ${attacks.length} attacks`);
 
     // Log audit
     if (req.user) {
@@ -57,12 +62,17 @@ exports.getAllAttacks = async (req, res) => {
       });
     }
 
-    res.json({
+    const response = {
       attacks,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       total
-    });
+    };
+    
+    // Debug logging
+    console.log(`[getAllAttacks Response] Sending ${response.attacks.length} attacks out of ${response.total} total (page ${response.currentPage} of ${response.totalPages})`);
+    
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -76,9 +86,10 @@ exports.getAttackById = async (req, res) => {
       .populate('assigned_to', 'username full_name email')
       .populate('verified_by', 'username full_name')
       .populate('source_ip_ref')
-      .populate('related_attacks', 'type date severity target_country')
-      .populate('related_vulnerabilities', 'cve_id cvss_score severity')
-      .populate('related_indicators', 'indicator indicator_type threat_type');
+      .populate('related_attacks', 'type date severity target_country');
+    
+    // Skip populating related_vulnerabilities and related_indicators 
+    // to avoid errors if models aren't registered
 
     if (!attack) {
       return res.status(404).json({ message: 'Attack not found' });
@@ -171,6 +182,18 @@ exports.updateAttack = async (req, res) => {
     
     if (!attack) {
       return res.status(404).json({ message: 'Attack not found' });
+    }
+
+    // Check if user role requires ownership (users can only edit their own attacks)
+    if (req.user.role === 'user') {
+      const attackOwnerId = attack.reported_by?.toString();
+      const userId = req.user._id.toString();
+      
+      if (attackOwnerId !== userId) {
+        return res.status(403).json({ 
+          message: 'Access denied. You can only edit attacks that you reported.' 
+        });
+      }
     }
 
     const oldData = attack.toObject();
