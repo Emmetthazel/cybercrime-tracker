@@ -18,6 +18,9 @@ router.get('/threat-intelligence/:id/network', authenticate, graphController.get
 // Graph statistics
 router.get('/statistics', authenticate, graphController.getGraphStatistics);
 
+// Graph visualization
+router.get('/visualization', authenticate, graphController.getGraphVisualization);
+
 // Sync operations (admin only - you might want to add admin middleware)
 router.post('/sync/attack/:id', authenticate, graphController.syncAttack);
 router.post('/sync/ip/:id', authenticate, graphController.syncIP);

@@ -120,13 +120,15 @@ const styles = {
   },
   button: {
     padding: '0.75rem',
-    backgroundColor: '#007bff',
+    backgroundColor: '#667eea',
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     fontSize: '1rem',
+    fontWeight: '500',
     cursor: 'pointer',
-    marginTop: '1rem'
+    marginTop: '1rem',
+    transition: 'background-color 0.2s'
   },
   error: {
     color: 'red',

@@ -209,6 +209,35 @@ exports.getGraphStatistics = async (req, res) => {
 };
 
 /**
+ * Get graph visualization data
+ * GET /api/graph/visualization
+ */
+exports.getGraphVisualization = async (req, res) => {
+  try {
+    const { maxNodes = 100, maxDepth = 2 } = req.query;
+    
+    const graphData = await neo4jService.getGraphVisualization(
+      parseInt(maxNodes),
+      parseInt(maxDepth)
+    );
+
+    res.json({
+      success: true,
+      nodes: graphData.nodes,
+      links: graphData.links,
+      nodeCount: graphData.nodes.length,
+      linkCount: graphData.links.length,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching graph visualization data',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Sync a specific attack to Neo4j
  * POST /api/graph/sync/attack/:id
  */

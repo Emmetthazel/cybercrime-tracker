@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Layout from '../Common/Layout';
 import { dashboardService } from '../../services/dashboardService';
 import AttackStats from './AttackStats';
 import AttackChart from './AttackChart';
+import GraphVisualization from './GraphVisualization';
+import CampaignDetection from './CampaignDetection';
+import './Dashboard.css';
 
 const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,159 +22,185 @@ const Dashboard = () => {
   const loadDashboard = async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await dashboardService.getOverview(30);
       setOverview(data);
+      toast.success('Dashboard loaded successfully');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard');
+      const errorMsg = err.response?.data?.message || 'Failed to load dashboard';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Loading dashboard...</div>;
-  }
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'graph', label: 'Graph Network', icon: '🕸️' },
+    { id: 'campaigns', label: 'Campaigns', icon: '🎯' },
+  ];
 
-  if (error) {
-    return <div style={styles.error}>Error: {error}</div>;
-  }
-
-  if (!overview) {
-    return <div>No data available</div>;
+  if (loading && !overview) {
+    return (
+      <Layout>
+        <div className="dashboard-loading">
+          <div className="spinner"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </Layout>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Cybercrime Dashboard</h1>
-      
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <h3>Total Attacks</h3>
-          <p style={styles.statValue}>{overview.attacks.total}</p>
+    <Layout>
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h1>Cybercrime Dashboard</h1>
+          <p className="dashboard-subtitle">Real-time threat intelligence and analysis</p>
         </div>
-        <div style={styles.statCard}>
-          <h3>Blacklisted IPs</h3>
-          <p style={styles.statValue}>{overview.ips.blacklisted}</p>
-        </div>
-        <div style={styles.statCard}>
-          <h3>Active Alerts</h3>
-          <p style={styles.statValue}>{overview.alerts.active}</p>
-        </div>
-        <div style={styles.statCard}>
-          <h3>High Threat IPs</h3>
-          <p style={styles.statValue}>{overview.ips.high_threat}</p>
-        </div>
-      </div>
 
-      <div style={styles.chartsGrid}>
-        <div style={styles.chartCard}>
-          <h3>Attacks by Type</h3>
-          <AttackChart data={overview.attacks.by_type} />
+        <div className="dashboard-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-label">{tab.label}</span>
+            </button>
+          ))}
         </div>
-        <div style={styles.chartCard}>
-          <h3>Attacks by Severity</h3>
-          <AttackChart data={overview.attacks.by_severity} type="doughnut" />
-        </div>
-      </div>
 
-      <div style={styles.section}>
-        <h2>Recent Attacks</h2>
-        <div style={styles.table}>
-          <table style={styles.tableStyle}>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Target Country</th>
-                <th>Severity</th>
-                <th>Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.recent_attacks?.slice(0, 10).map((attack) => (
-                <tr key={attack._id}>
-                  <td>{attack.type}</td>
-                  <td>{attack.target_country}</td>
-                  <td>{attack.severity}</td>
-                  <td>{new Date(attack.date).toLocaleDateString()}</td>
-                  <td>{attack.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="dashboard-content">
+          {error && (
+            <div className="error-banner">
+              <span>⚠️ {error}</span>
+              <button onClick={loadDashboard} className="retry-btn">
+                Retry
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'overview' && (
+            <div className="overview-tab">
+              {overview && (
+                <>
+                  <div className="stats-grid">
+                    <div className="stat-card stat-card-primary">
+                      <div className="stat-icon">⚔️</div>
+                      <div className="stat-content">
+                        <h3>Total Attacks</h3>
+                        <p className="stat-value">{overview.attacks.total}</p>
+                        <p className="stat-change">Last 30 days</p>
+                      </div>
+                    </div>
+                    <div className="stat-card stat-card-danger">
+                      <div className="stat-icon">🚫</div>
+                      <div className="stat-content">
+                        <h3>Blacklisted IPs</h3>
+                        <p className="stat-value">{overview.ips.blacklisted}</p>
+                        <p className="stat-change">Active threats</p>
+                      </div>
+                    </div>
+                    <div className="stat-card stat-card-warning">
+                      <div className="stat-icon">⚠️</div>
+                      <div className="stat-content">
+                        <h3>Active Alerts</h3>
+                        <p className="stat-value">{overview.alerts.active}</p>
+                        <p className="stat-change">Requires attention</p>
+                      </div>
+                    </div>
+                    <div className="stat-card stat-card-info">
+                      <div className="stat-icon">🔴</div>
+                      <div className="stat-content">
+                        <h3>High Threat IPs</h3>
+                        <p className="stat-value">{overview.ips.high_threat}</p>
+                        <p className="stat-change">Threat score > 70</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="charts-grid">
+                    <div className="chart-card">
+                      <h3>Attacks by Type</h3>
+                      <AttackChart data={overview.attacks.by_type} />
+                    </div>
+                    <div className="chart-card">
+                      <h3>Attacks by Severity</h3>
+                      <AttackChart data={overview.attacks.by_severity} type="doughnut" />
+                    </div>
+                  </div>
+
+                  <div className="section-card">
+                    <h2>Recent Attacks</h2>
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Target Country</th>
+                            <th>Severity</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {overview.recent_attacks?.slice(0, 10).map((attack) => (
+                            <tr key={attack._id}>
+                              <td>
+                                <span className="attack-type">{attack.type}</span>
+                              </td>
+                              <td>{attack.target_country || 'Unknown'}</td>
+                              <td>
+                                <span className={`severity-badge severity-${attack.severity?.toLowerCase()}`}>
+                                  {attack.severity}
+                                </span>
+                              </td>
+                              <td>{new Date(attack.date).toLocaleDateString()}</td>
+                              <td>
+                                <span className={`status-badge status-${attack.status?.toLowerCase()}`}>
+                                  {attack.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'graph' && (
+            <div className="graph-tab">
+              <GraphVisualization maxNodes={150} />
+            </div>
+          )}
+
+          {activeTab === 'campaigns' && (
+            <div className="campaigns-tab">
+              <CampaignDetection />
+            </div>
+          )}
         </div>
       </div>
-    </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+    </Layout>
   );
 };
 
-const styles = {
-  container: {
-    padding: '2rem',
-    maxWidth: '1400px',
-    margin: '0 auto'
-  },
-  title: {
-    marginBottom: '2rem',
-    color: '#333'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '2rem',
-    fontSize: '1.2rem'
-  },
-  error: {
-    color: 'red',
-    padding: '1rem',
-    backgroundColor: '#ffe6e6',
-    borderRadius: '4px',
-    margin: '1rem'
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem'
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: '1.5rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  statValue: {
-    fontSize: '2rem',
-    fontWeight: 'bold',
-    color: '#007bff',
-    margin: '0.5rem 0 0 0'
-  },
-  chartsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem'
-  },
-  chartCard: {
-    backgroundColor: 'white',
-    padding: '1.5rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  section: {
-    backgroundColor: 'white',
-    padding: '1.5rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginTop: '2rem'
-  },
-  table: {
-    overflowX: 'auto'
-  },
-  tableStyle: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  }
-};
-
 export default Dashboard;
-

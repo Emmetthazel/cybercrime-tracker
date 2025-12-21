@@ -184,25 +184,51 @@ const findAttackChain = async (ipId) => {
  */
 const detectCampaigns = async (minAttacks = 3, startDate = null) => {
   return await readTransaction(async (tx) => {
+    // Campaign detection: find attacks connected via RELATED_TO relationships
+    // OR that share the same source IP
     let query = `
-      MATCH (a1:Attack)-[:RELATED_TO]-(a2:Attack)
-      WHERE a1.id <> a2.id
+      MATCH (a1:Attack)
+      WHERE a1.date IS NOT NULL
     `;
     
     if (startDate) {
-      query += ` AND a1.date >= datetime($startDate) AND a2.date >= datetime($startDate)`;
+      query += ` AND a1.date >= $startDate`;
     }
     
     query += `
-      WITH a1, collect(DISTINCT a2) as related
-      WHERE size(related) >= $minAttacks
-      RETURN a1.id as campaign_lead, 
-             collect(DISTINCT a1) + collect(DISTINCT related) as campaign_attacks,
+      OPTIONAL MATCH (a1)-[:RELATED_TO]-(a2:Attack)
+      WHERE a2.date IS NOT NULL
+    `;
+    
+    if (startDate) {
+      query += ` AND a2.date >= $startDate`;
+    }
+    
+    query += `
+      OPTIONAL MATCH (a1)-[:ORIGINATED_FROM]->(ip:IP)<-[:ORIGINATED_FROM]-(a3:Attack)
+      WHERE a3.id <> a1.id AND a3.date IS NOT NULL
+    `;
+    
+    if (startDate) {
+      query += ` AND a3.date >= $startDate`;
+    }
+    
+    query += `
+      WITH a1, 
+           collect(DISTINCT a2) as related,
+           collect(DISTINCT a3) as same_ip
+      WITH a1, related, same_ip,
+           [x IN related WHERE x IS NOT NULL] + 
+           [x IN same_ip WHERE x IS NOT NULL] as all_related_raw
+      WITH a1, all_related_raw
+      WHERE size(all_related_raw) >= $minAttacks - 1
+      RETURN a1.id as campaign_lead,
              a1.campaign_id as campaign_id,
              a1.threat_actor as threat_actor,
-             min([a in collect(DISTINCT a1) + collect(DISTINCT related) | a.date]) as start_date,
-             max([a in collect(DISTINCT a1) + collect(DISTINCT related) | a.date]) as end_date,
-             count(DISTINCT related) + 1 as attack_count
+             a1.date as a1_date,
+             [a IN all_related_raw | a.date] as related_dates,
+             size(all_related_raw) + 1 as attack_count,
+             [a1] + all_related_raw as campaign_attacks
       ORDER BY attack_count DESC
       LIMIT 20
     `;
@@ -212,16 +238,73 @@ const detectCampaigns = async (minAttacks = 3, startDate = null) => {
       params.startDate = startDate.toISOString();
     }
     
-    const result = await tx.run(query, params);
-    return result.records.map(record => ({
-      campaign_lead: record.get('campaign_lead'),
-      campaign_id: record.get('campaign_id'),
-      threat_actor: record.get('threat_actor'),
-      start_date: record.get('start_date'),
-      end_date: record.get('end_date'),
-      attack_count: record.get('attack_count').toNumber(),
-      attacks: record.get('campaign_attacks').map(a => a.properties),
-    }));
+    try {
+      const result = await tx.run(query, params);
+      
+      // Deduplicate campaigns by campaign_lead
+      const seen = new Set();
+      
+      return result.records
+        .map(record => {
+          const campaign_lead = record.get('campaign_lead');
+          
+          // Skip duplicates
+          if (seen.has(campaign_lead)) {
+            return null;
+          }
+          seen.add(campaign_lead);
+          
+          const campaign_attacks = record.get('campaign_attacks');
+          const a1_date = record.get('a1_date');
+          const related_dates = record.get('related_dates') || [];
+          
+          // Deduplicate attacks by ID in JavaScript
+          const attackMap = new Map();
+          if (campaign_attacks) {
+            campaign_attacks.forEach(attack => {
+              if (attack) {
+                const attackId = attack.properties ? attack.properties.id : (attack.id || JSON.stringify(attack));
+                if (!attackMap.has(attackId)) {
+                  attackMap.set(attackId, attack.properties || attack);
+                }
+              }
+            });
+          }
+          const uniqueAttacks = Array.from(attackMap.values());
+          
+          // Extract all dates (filter out null/empty)
+          const allDates = [];
+          if (a1_date) allDates.push(a1_date);
+          related_dates.forEach(date => {
+            if (date) allDates.push(date);
+          });
+          
+          // Calculate min/max dates
+          let start_date = null;
+          let end_date = null;
+          if (allDates.length > 0) {
+            allDates.sort(); // ISO strings sort correctly
+            start_date = allDates[0];
+            end_date = allDates[allDates.length - 1];
+          }
+          
+          return {
+            campaign_lead: campaign_lead,
+            campaign_id: record.get('campaign_id'),
+            threat_actor: record.get('threat_actor'),
+            start_date: start_date,
+            end_date: end_date,
+            attack_count: uniqueAttacks.length,
+            attacks: uniqueAttacks,
+          };
+        })
+        .filter(campaign => campaign !== null);
+    } catch (error) {
+      console.error('Campaign detection query error:', error.message);
+      console.error('Query:', query);
+      console.error('Params:', params);
+      throw error;
+    }
   });
 };
 
@@ -276,6 +359,81 @@ const getGraphStatistics = async () => {
   });
 };
 
+/**
+ * Get graph data for visualization
+ * @param {number} maxNodes - Maximum number of nodes to return
+ * @returns {Promise} Graph data in format: { nodes: [], links: [] }
+ */
+const getGraphVisualization = async (maxNodes = 100) => {
+  return await readTransaction(async (tx) => {
+    // Get nodes
+    const nodesQuery = `
+      MATCH (n)
+      WHERE labels(n)[0] IN ['Attack', 'IP', 'User']
+      RETURN n, labels(n)[0] as label
+      LIMIT ${maxNodes}
+    `;
+    
+    // Get relationships
+    const relsQuery = `
+      MATCH (a)-[r]->(b)
+      WHERE labels(a)[0] IN ['Attack', 'IP', 'User']
+        AND labels(b)[0] IN ['Attack', 'IP', 'User']
+      RETURN a.id as source, b.id as target, type(r) as type, r
+      LIMIT 200
+    `;
+    
+    const [nodesResult, relsResult] = await Promise.all([
+      tx.run(nodesQuery),
+      tx.run(relsQuery)
+    ]);
+    
+    // Build node map
+    const nodeMap = new Map();
+    nodesResult.records.forEach(record => {
+      const node = record.get('n');
+      const label = record.get('label');
+      const nodeId = node.properties.id;
+      
+      nodeMap.set(nodeId, {
+        id: nodeId,
+        label: label,
+        ...node.properties
+      });
+    });
+    
+    // Build links (only include if both nodes exist)
+    const links = [];
+    const linkSet = new Set(); // To avoid duplicates
+    
+    relsResult.records.forEach(record => {
+      const source = record.get('source');
+      const target = record.get('target');
+      const type = record.get('type');
+      const rel = record.get('r');
+      
+      // Only add link if both nodes are in our node map
+      if (nodeMap.has(source) && nodeMap.has(target)) {
+        const linkKey = `${source}-${type}-${target}`;
+        if (!linkSet.has(linkKey)) {
+          linkSet.add(linkKey);
+          links.push({
+            source: source,
+            target: target,
+            type: type,
+            ...(rel.properties || {})
+          });
+        }
+      }
+    });
+    
+    return {
+      nodes: Array.from(nodeMap.values()),
+      links: links
+    };
+  });
+};
+
 module.exports = {
   createOrUpdateNode,
   createRelationship,
@@ -287,5 +445,6 @@ module.exports = {
   detectCampaigns,
   findThreatIntelligenceNetwork,
   getGraphStatistics,
+  getGraphVisualization,
 };
 
