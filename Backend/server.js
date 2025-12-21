@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('../Configuration/config/db');
+const { connectNeo4j } = require('../Configuration/config/neo4j');
 const config = require('../Configuration/config/config');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -14,6 +15,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const sourcesRoutes = require('./routes/sources');
 const reportsRoutes = require('./routes/reports');
 const alertsRoutes = require('./routes/alerts');
+const graphRoutes = require('./routes/graph');
 
 // Initialize Express app
 const app = express();
@@ -28,8 +30,19 @@ let serverStarted = false;
 
 const startServer = async () => {
   try {
-    // Connect to database first
+    // Connect to MongoDB first
     const connection = await connectDB();
+    
+    // Connect to Neo4j (optional - app can run without it)
+    let neo4jConnected = false;
+    try {
+      await connectNeo4j();
+      neo4jConnected = true;
+      console.log('✅ Neo4j connection established');
+    } catch (neo4jError) {
+      console.warn('⚠️  Neo4j connection failed (optional):', neo4jError.message);
+      console.warn('   Graph features will be disabled. App will continue with MongoDB only.');
+    }
     
     // Wait a bit and verify connection
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -61,6 +74,7 @@ const startServer = async () => {
         console.log(`   Environment: ${config.NODE_ENV}`);
         console.log(`   API available at http://localhost:${PORT}/api`);
         console.log(`   MongoDB State: ${connection.readyState === 1 ? 'Connected ✅' : `State ${connection.readyState}`}`);
+        console.log(`   Neo4j State: ${neo4jConnected ? 'Connected ✅' : 'Not Connected ⚠️'}`);
         serverStarted = true;
       });
     }
@@ -115,6 +129,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/sources', sourcesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/graph', graphRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -129,7 +144,8 @@ app.get('/', (req, res) => {
       dashboard: '/api/dashboard',
       sources: '/api/sources',
       reports: '/api/reports',
-      alerts: '/api/alerts'
+      alerts: '/api/alerts',
+      graph: '/api/graph'
     }
   });
 });

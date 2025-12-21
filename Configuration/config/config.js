@@ -8,6 +8,12 @@ module.exports = {
   // MongoDB
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/cybercrime_tracker',
   
+  // Neo4j
+  NEO4J_URI: process.env.NEO4J_URI || 'bolt://localhost:7687',
+  NEO4J_USER: process.env.NEO4J_USER || 'neo4j',
+  NEO4J_PASSWORD: process.env.NEO4J_PASSWORD || 'neo4j',
+  NEO4J_DATABASE: process.env.NEO4J_DATABASE || 'neo4j',
+  
   // JWT
   JWT_SECRET: process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your_refresh_token_secret',

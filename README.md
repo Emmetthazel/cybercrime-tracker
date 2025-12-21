@@ -1,6 +1,6 @@
 # 🕵️ Cybercrime Incident Tracker
 
-A comprehensive platform for collecting, analyzing, and visualizing cyberattack incidents from multiple sources using MongoDB and modern web technologies.
+A comprehensive platform for collecting, analyzing, and visualizing cyberattack incidents from multiple sources using MongoDB, Neo4j, and modern web technologies.
 
 ## 🎯 Project Overview
 
@@ -16,6 +16,7 @@ This platform collects and analyzes cyberattack incidents (phishing, DDoS, ranso
 
 - Node.js (v14 or higher)
 - MongoDB (v4.4 or higher)
+- Neo4j (v4.0 or higher) - Optional but recommended for graph features
 - npm or yarn
 
 ### Installation
@@ -57,6 +58,12 @@ This platform collects and analyzes cyberattack incidents (phishing, DDoS, ranso
 
    # CORS
    CORS_ORIGIN=http://localhost:3000
+
+   # Neo4j (Optional - for graph features)
+   NEO4J_URI=bolt://localhost:7687
+   NEO4J_USER=neo4j
+   NEO4J_PASSWORD=your_neo4j_password
+   NEO4J_DATABASE=neo4j
    ```
 
    For the frontend, create a `.env` file in the `Frontend` directory:
@@ -68,15 +75,41 @@ This platform collects and analyzes cyberattack incidents (phishing, DDoS, ranso
    ```bash
    mongod
    ```
+   Or use the provided script:
+   ```powershell
+   .\start-mongodb.ps1
+   ```
 
-6. **Start Backend Server**
+6. **Start Neo4j (Optional but recommended)**
+   
+   **Option A: Docker**
+   ```bash
+   docker run --name neo4j-cybercrime -p7474:7474 -p7687:7687 -e NEO4J_AUTH=neo4j/your_password neo4j:latest
+   ```
+   
+   **Option B: Neo4j Desktop**
+   - Download from https://neo4j.com/download/
+   - Create a new database
+   - Start the database
+   - Update credentials in `.env` file
+   
+   **Note:** The application will continue to work without Neo4j, but graph features (campaign detection, relationship queries) will be disabled.
+
+7. **Sync Data to Neo4j (Optional - if Neo4j is enabled)**
+   ```bash
+   cd Backend
+   node scripts/sync-to-neo4j.js
+   ```
+   This will sync all existing MongoDB data to Neo4j for graph queries.
+
+8. **Start Backend Server**
    ```bash
    cd Backend
    npm run dev
    ```
    The backend will run on `http://localhost:5000`
 
-7. **Start Frontend**
+9. **Start Frontend**
    ```bash
    cd Frontend
    npm start
@@ -106,9 +139,11 @@ cybercrime-tracker/
 └── Tests/              # Test files
 ```
 
-## 🗄️ Database Collections
+## 🗄️ Databases
 
-The project uses 9 MongoDB collections:
+### MongoDB Collections
+
+The project uses 9 MongoDB collections for document storage:
 
 1. **Attacks** - Cyberattack incidents
 2. **IPs** - Suspicious IP addresses
@@ -119,6 +154,16 @@ The project uses 9 MongoDB collections:
 7. **ThreatIntelligence** - Threat indicators (IOCs)
 8. **Vulnerability** - CVE vulnerabilities
 9. **AuditLog** - System audit logs
+
+### Neo4j Graph Database (Optional)
+
+Neo4j is used for relationship queries and graph analysis:
+- **Campaign Detection**: Find related attacks and attack patterns
+- **Network Analysis**: Discover IP associations (same ASN, organization)
+- **Threat Intelligence Networks**: Connect indicators, malware families, C2 servers
+- **Path Queries**: Trace attack chains across multiple hops
+
+See [`UML & Documentation/NEO4J-INTEGRATION.md`](UML%20&%20Documentation/NEO4J-INTEGRATION.md) for detailed Neo4j setup and usage.
 
 ## 🔌 API Endpoints
 
@@ -148,6 +193,14 @@ The project uses 9 MongoDB collections:
 - `GET /api/dashboard/overview` - Get dashboard overview
 - `GET /api/dashboard/trends` - Get attack trends
 - `GET /api/dashboard/top-countries` - Get top countries
+
+### Graph Queries (Neo4j - Optional)
+- `GET /api/graph/attacks/:id/related` - Get related attacks
+- `GET /api/graph/ips/:id/attack-chain` - Get IP attack chain
+- `GET /api/graph/ips/:id/associated` - Get associated IPs
+- `GET /api/graph/campaigns/detect` - Detect attack campaigns
+- `GET /api/graph/threat-intelligence/:id/network` - Get threat intelligence network
+- `GET /api/graph/statistics` - Get graph statistics
 
 ### Other Endpoints
 - `GET /api/sources` - Get all data sources
@@ -179,12 +232,15 @@ npm test
 ### Backend
 - ✅ RESTful API with Express.js
 - ✅ MongoDB with Mongoose ODM
+- ✅ Neo4j Graph Database (optional) for relationship queries
 - ✅ JWT Authentication
 - ✅ Role-Based Access Control (RBAC)
 - ✅ Request validation
 - ✅ Error handling
 - ✅ Rate limiting
 - ✅ Audit logging
+- ✅ Campaign detection via graph analysis
+- ✅ Network analysis and IP associations
 
 ### Frontend
 - ✅ React with React Router
@@ -229,13 +285,20 @@ For detailed documentation, see:
 - `UML & Documentation/README.md` - Project overview
 - `UML & Documentation/DATABASE-SCHEMA.md` - Database schema details
 - `UML & Documentation/PROJECT-STRUCTURE.md` - Project structure
+- `UML & Documentation/NEO4J-INTEGRATION.md` - Neo4j integration guide
 
 ## 🐛 Troubleshooting
 
 ### MongoDB Connection Issues
-- Ensure MongoDB is running: `mongod`
+- Ensure MongoDB is running: `mongod` or use `.\start-mongodb.ps1`
 - Check connection string in `.env` file
 - Verify MongoDB is accessible on the specified port
+
+### Neo4j Connection Issues
+- Ensure Neo4j is running (check Docker container or Neo4j Desktop)
+- Verify credentials in `.env` file (NEO4J_USER, NEO4J_PASSWORD)
+- Check Neo4j URI format: `bolt://localhost:7687`
+- **Note:** The app works without Neo4j; graph features will be disabled
 
 ### Port Already in Use
 - Change `PORT` in `.env` file
