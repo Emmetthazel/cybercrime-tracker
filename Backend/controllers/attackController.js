@@ -1,6 +1,8 @@
 const Attack = require('../models/Attack');
 const IP = require('../models/IP');
+const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const graphSyncService = require('../services/graphSyncService');
 
 // Get all attacks with filtering and pagination
 exports.getAllAttacks = async (req, res) => {
@@ -155,6 +157,30 @@ exports.createAttack = async (req, res) => {
     await attack.populate('reported_by', 'username full_name');
     await attack.populate('source_ip_ref', 'ip_address country threat_score');
 
+    // Sync to Neo4j for graph visualization
+    try {
+      // Sync IP to Neo4j if it exists (source_ip_ref is populated, so it's the IP document)
+      if (attack.source_ip_ref) {
+        await graphSyncService.syncIP(attack.source_ip_ref);
+      }
+      
+      // Sync user to Neo4j if it exists (reported_by is populated, so it's the User document with _id)
+      if (attack.reported_by) {
+        // reported_by is populated, get the user ID and fetch full document
+        const userId = attack.reported_by._id || attack.reported_by;
+        const userDoc = await User.findById(userId);
+        if (userDoc) {
+          await graphSyncService.syncUser(userDoc);
+        }
+      }
+      
+      // Sync attack to Neo4j
+      await graphSyncService.syncAttack(attack);
+    } catch (syncError) {
+      // Log sync error but don't fail the request
+      console.error('Error syncing attack to Neo4j:', syncError.message);
+    }
+
     // Log audit
     if (req.user) {
       await AuditLog.create({
@@ -202,6 +228,34 @@ exports.updateAttack = async (req, res) => {
     
     await attack.save();
 
+    // Populate relationships for sync
+    await attack.populate('source_ip_ref');
+    await attack.populate('reported_by');
+
+    // Sync to Neo4j for graph visualization
+    try {
+      // Sync IP to Neo4j if it exists (source_ip_ref is populated, so it's the IP document)
+      if (attack.source_ip_ref) {
+        await graphSyncService.syncIP(attack.source_ip_ref);
+      }
+      
+      // Sync user to Neo4j if it exists (reported_by is populated, so it's the User document with _id)
+      if (attack.reported_by) {
+        // reported_by is populated, get the user ID and fetch full document
+        const userId = attack.reported_by._id || attack.reported_by;
+        const userDoc = await User.findById(userId);
+        if (userDoc) {
+          await graphSyncService.syncUser(userDoc);
+        }
+      }
+      
+      // Sync attack to Neo4j
+      await graphSyncService.syncAttack(attack);
+    } catch (syncError) {
+      // Log sync error but don't fail the request
+      console.error('Error syncing attack to Neo4j:', syncError.message);
+    }
+
     // Log audit
     if (req.user) {
       const fieldsChanged = Object.keys(req.body).filter(key => 
@@ -237,6 +291,16 @@ exports.deleteAttack = async (req, res) => {
     
     if (!attack) {
       return res.status(404).json({ message: 'Attack not found' });
+    }
+
+    const attackId = attack._id.toString();
+
+    // Remove from Neo4j before deleting from MongoDB
+    try {
+      await graphSyncService.removeAttack(attackId);
+    } catch (syncError) {
+      // Log sync error but don't fail the request
+      console.error('Error removing attack from Neo4j:', syncError.message);
     }
 
     // Log audit before deletion

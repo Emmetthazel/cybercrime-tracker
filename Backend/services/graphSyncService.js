@@ -29,43 +29,59 @@ const syncAttack = async (attack) => {
 
     // Sync relationships
     if (attack.source_ip_ref) {
-      await neo4jService.createRelationship(
-        'Attack',
-        attack._id.toString(),
-        'ORIGINATED_FROM',
-        'IP',
-        attack.source_ip_ref.toString(),
-        { source_ip: attack.source_ip }
-      );
+      // Handle both populated object and ObjectId
+      const ipId = attack.source_ip_ref._id ? attack.source_ip_ref._id.toString() : attack.source_ip_ref.toString();
+      try {
+        await neo4jService.createRelationship(
+          'Attack',
+          attack._id.toString(),
+          'ORIGINATED_FROM',
+          'IP',
+          ipId,
+          { source_ip: attack.source_ip }
+        );
+      } catch (relError) {
+        console.error(`Error creating ORIGINATED_FROM relationship for attack ${attack._id} to IP ${ipId}:`, relError.message);
+      }
     }
 
     if (attack.reported_by) {
-      await neo4jService.createRelationship(
-        'Attack',
-        attack._id.toString(),
-        'REPORTED_BY',
-        'User',
-        attack.reported_by.toString()
-      );
+      // Handle both populated object and ObjectId
+      const userId = attack.reported_by._id ? attack.reported_by._id.toString() : attack.reported_by.toString();
+      try {
+        await neo4jService.createRelationship(
+          'Attack',
+          attack._id.toString(),
+          'REPORTED_BY',
+          'User',
+          userId
+        );
+      } catch (relError) {
+        console.error(`Error creating REPORTED_BY relationship for attack ${attack._id} to User ${userId}:`, relError.message);
+      }
     }
 
     if (attack.assigned_to) {
+      // Handle both populated object and ObjectId
+      const assignedToId = attack.assigned_to._id ? attack.assigned_to._id.toString() : attack.assigned_to.toString();
       await neo4jService.createRelationship(
         'Attack',
         attack._id.toString(),
         'ASSIGNED_TO',
         'User',
-        attack.assigned_to.toString()
+        assignedToId
       );
     }
 
     if (attack.verified_by) {
+      // Handle both populated object and ObjectId
+      const verifiedById = attack.verified_by._id ? attack.verified_by._id.toString() : attack.verified_by.toString();
       await neo4jService.createRelationship(
         'Attack',
         attack._id.toString(),
         'VERIFIED_BY',
         'User',
-        attack.verified_by.toString()
+        verifiedById
       );
     }
 
