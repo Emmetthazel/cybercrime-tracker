@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { toast } from 'react-toastify';
 import { userService } from '../../services/userService';
 import { AuthContext } from '../../context/AuthContext';
+import Layout from '../Common/Layout';
 import UserForm from './UserForm';
 import UserDetails from './UserDetails';
 import './UserManagement.css';
@@ -100,24 +101,28 @@ const UserManagement = () => {
 
   if (!isAdmin) {
     return (
-      <div className="user-management-error">
-        <h2>Access Denied</h2>
-        <p>You must be an administrator to access user management.</p>
-      </div>
+      <Layout>
+        <div className="user-management-error">
+          <h2>Access Denied</h2>
+          <p>You must be an administrator to access user management.</p>
+        </div>
+      </Layout>
     );
   }
 
   if (loading && users.length === 0) {
     return (
-      <div className="user-management-loading">
-        <div className="spinner"></div>
-        <p>Loading users...</p>
-      </div>
+      <Layout>
+        <div className="user-management-loading">
+          <div className="spinner"></div>
+          <p>Loading users...</p>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="user-management">
         <div className="user-management-header">
           <div>
@@ -231,7 +236,16 @@ const UserManagement = () => {
                         >
                           ✏️
                         </button>
-                        {user._id !== currentUser._id && (
+                        {(() => {
+                          // Convert both IDs to strings for reliable comparison
+                          // user._id comes from MongoDB as ObjectId (string when JSON parsed)
+                          // currentUser.id comes from login endpoint (string)
+                          const userId = String(user._id || user.id || '');
+                          const currentUserId = String(currentUser?.id || currentUser?._id || '');
+                          // Hide delete button for the current logged-in user (can't delete yourself)
+                          const shouldShow = userId && currentUserId && userId !== currentUserId;
+                          return shouldShow;
+                        })() && (
                           <button
                             onClick={() => handleDelete(user._id, user.username)}
                             className="btn-delete"
@@ -293,7 +307,7 @@ const UserManagement = () => {
           </div>
         </div>
       )}
-    </>
+    </Layout>
   );
 };
 
