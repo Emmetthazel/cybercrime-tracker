@@ -291,6 +291,24 @@ const ReportAttack = ({ attackId, onSuccess, onCancel }) => {
             </div>
 
             <div className="form-group">
+              <label htmlFor="status">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <option value="Detected">Detected</option>
+                <option value="Under Investigation">Under Investigation</option>
+                <option value="Contained">Contained</option>
+                <option value="Mitigated">Mitigated</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
               <label htmlFor="date">
                 Date <span className="required">*</span>
               </label>
