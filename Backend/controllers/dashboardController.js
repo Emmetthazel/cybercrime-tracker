@@ -9,6 +9,12 @@ exports.getDashboardOverview = async (req, res) => {
     const { days = 30 } = req.query;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
+    startDate.setHours(0, 0, 0, 0); // Set to start of day for consistent date comparison
+
+    // Debug logging
+    console.log(`[Dashboard] Querying dashboard data for last ${days} days`);
+    console.log(`[Dashboard] Start date: ${startDate.toISOString()}`);
+    console.log(`[Dashboard] End date: ${new Date().toISOString()}`);
 
     // Get statistics from multiple collections
     const [
@@ -19,13 +25,8 @@ exports.getDashboardOverview = async (req, res) => {
       recentAttacks,
       topIPs
     ] = await Promise.all([
-      // Attack statistics
+      // Attack statistics - show ALL attacks (no date filter for overall stats)
       Attack.aggregate([
-        {
-          $match: {
-            date: { $gte: startDate }
-          }
-        },
         {
           $facet: {
             total: [{ $count: 'count' }],
@@ -63,6 +64,15 @@ exports.getDashboardOverview = async (req, res) => {
                   avg: { $avg: '$financial_impact' }
                 }
               }
+            ],
+            // Also get stats for last 30 days for comparison
+            recent_period: [
+              {
+                $match: {
+                  date: { $gte: startDate }
+                }
+              },
+              { $count: 'count' }
             ]
           }
         }
@@ -158,11 +168,11 @@ exports.getDashboardOverview = async (req, res) => {
         }
       ]),
 
-      // Recent attacks
-      Attack.find({ date: { $gte: startDate } })
+      // Recent attacks - show 10 most recent attacks regardless of date
+      Attack.find({})
         .populate('reported_by', 'username')
         .populate('source_ip_ref', 'ip_address country')
-        .sort({ date: -1 })
+        .sort({ date: -1, created_at: -1 })
         .limit(10)
         .lean(),
 
@@ -173,6 +183,26 @@ exports.getDashboardOverview = async (req, res) => {
         .select('ip_address country threat_score attack_count is_blacklisted')
         .lean()
     ]);
+
+    // Debug logging for query results
+    const totalAttacksAllTime = attackStats[0].total[0]?.count || 0;
+    const totalAttacksInPeriod = attackStats[0].recent_period[0]?.count || 0;
+    const totalUsers = userStats[0].total[0]?.count || 0;
+    const recentAttacksCount = recentAttacks.length;
+    
+    console.log(`[Dashboard] Total attacks (all time): ${totalAttacksAllTime}`);
+    console.log(`[Dashboard] Total attacks (last ${days} days): ${totalAttacksInPeriod}`);
+    console.log(`[Dashboard] Total users: ${totalUsers}`);
+    console.log(`[Dashboard] Recent attacks returned: ${recentAttacksCount}`);
+    
+    // Log some sample attack dates for debugging
+    if (recentAttacks.length > 0) {
+      console.log(`[Dashboard] Sample recent attack dates:`, recentAttacks.slice(0, 3).map(a => ({
+        id: a._id,
+        date: a.date,
+        type: a.type
+      })));
+    }
 
     // Format response
     const dashboard = {
@@ -220,6 +250,7 @@ exports.getAttackTrends = async (req, res) => {
     const { days = 30, group_by = 'day' } = req.query;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
+    startDate.setHours(0, 0, 0, 0); // Set to start of day for consistent date comparison
 
     let dateFormat;
     switch (group_by) {
@@ -281,6 +312,7 @@ exports.getTopCountries = async (req, res) => {
     const { days = 30, limit = 10 } = req.query;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
+    startDate.setHours(0, 0, 0, 0); // Set to start of day for consistent date comparison
 
     const countries = await Attack.aggregate([
       {

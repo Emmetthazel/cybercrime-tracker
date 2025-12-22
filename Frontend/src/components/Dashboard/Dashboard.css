@@ -173,7 +173,7 @@
   margin: 0 0 0.5rem 0;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #666;
+  color: #354352;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -182,13 +182,13 @@
   margin: 0 0 0.25rem 0;
   font-size: 2rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #212529;
 }
 
 .stat-change {
   margin: 0;
   font-size: 0.75rem;
-  color: #999;
+  color: #c6e9f6;
 }
 
 .charts-grid {

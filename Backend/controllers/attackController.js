@@ -150,6 +150,18 @@ exports.createAttack = async (req, res) => {
       attackData.reported_by = req.user._id;
     }
 
+    // Ensure date is set to current date/time if not provided or if provided date is invalid
+    if (!attackData.date || isNaN(new Date(attackData.date).getTime())) {
+      attackData.date = new Date();
+    } else {
+      // Ensure date is a proper Date object
+      attackData.date = new Date(attackData.date);
+    }
+
+    // Debug logging
+    console.log(`[createAttack] Creating attack with date: ${attackData.date.toISOString()}`);
+    console.log(`[createAttack] Reported by: ${attackData.reported_by}`);
+
     const attack = new Attack(attackData);
     await attack.save();
 

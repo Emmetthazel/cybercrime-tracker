@@ -93,7 +93,7 @@ const Dashboard = () => {
                       <div className="stat-content">
                         <h3>Total Attacks</h3>
                         <p className="stat-value">{overview.attacks.total}</p>
-                        <p className="stat-change">Last 30 days</p>
+                        <p className="stat-change">All time</p>
                       </div>
                     </div>
                     <div className="stat-card stat-card-danger">
