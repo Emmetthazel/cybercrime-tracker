@@ -126,12 +126,22 @@ exports.createAttack = async (req, res) => {
       let ipDoc = await IP.findOne({ ip_address: attackData.source_ip });
       
       if (!ipDoc) {
+        // Calculate initial threat score based on attack severity
+        let initialThreatScore = 0;
+        if (attackData.severity === 'Critical') initialThreatScore = 80;
+        else if (attackData.severity === 'High') initialThreatScore = 60;
+        else if (attackData.severity === 'Medium') initialThreatScore = 40;
+        else if (attackData.severity === 'Low') initialThreatScore = 20;
+
         // Create IP if it doesn't exist
         ipDoc = await IP.create({
           ip_address: attackData.source_ip,
           country: attackData.source_country,
           first_seen: new Date(),
-          last_activity: new Date()
+          last_activity: new Date(),
+          attack_count: 1,
+          threat_score: initialThreatScore,
+          attack_types: attackData.type ? [attackData.type] : []
         });
       } else {
         // Update IP stats
@@ -140,6 +150,34 @@ exports.createAttack = async (req, res) => {
         if (attackData.type && !ipDoc.attack_types.includes(attackData.type)) {
           ipDoc.attack_types.push(attackData.type);
         }
+        
+        // Recalculate threat score based on attack count and severity
+        // Base score increases with attack count (capped at 50 points)
+        const countScore = Math.min(ipDoc.attack_count * 10, 50);
+        
+        // Severity multiplier (adds 0-30 points based on current attack)
+        let severityBonus = 0;
+        if (attackData.severity === 'Critical') severityBonus = 30;
+        else if (attackData.severity === 'High') severityBonus = 20;
+        else if (attackData.severity === 'Medium') severityBonus = 10;
+        else if (attackData.severity === 'Low') severityBonus = 5;
+        
+        // Calculate new threat score (weighted average to smooth changes)
+        const newThreatScore = Math.min(100, Math.max(
+          ipDoc.threat_score || 0,
+          countScore + severityBonus
+        ));
+        ipDoc.threat_score = newThreatScore;
+        
+        // Auto-blacklist if threat score >= 80 or attack count >= 5
+        if ((newThreatScore >= 80 || ipDoc.attack_count >= 5) && !ipDoc.is_blacklisted) {
+          ipDoc.is_blacklisted = true;
+          ipDoc.blacklisted_at = new Date();
+          if (!ipDoc.blacklist_reason) {
+            ipDoc.blacklist_reason = `Auto-blacklisted due to ${ipDoc.attack_count} attack(s) with threat score ${newThreatScore}`;
+          }
+        }
+        
         await ipDoc.save();
       }
       

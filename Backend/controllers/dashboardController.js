@@ -190,10 +190,22 @@ exports.getDashboardOverview = async (req, res) => {
     const totalUsers = userStats[0].total[0]?.count || 0;
     const recentAttacksCount = recentAttacks.length;
     
+    // IP statistics
+    const totalIPs = ipStats[0].total[0]?.count || 0;
+    const blacklistedIPs = ipStats[0].blacklisted[0]?.count || 0;
+    const highThreatIPs = ipStats[0].high_threat[0]?.count || 0;
+    
+    // Alert statistics
+    const activeAlerts = alertStats[0].active[0]?.count || 0;
+    
     console.log(`[Dashboard] Total attacks (all time): ${totalAttacksAllTime}`);
     console.log(`[Dashboard] Total attacks (last ${days} days): ${totalAttacksInPeriod}`);
     console.log(`[Dashboard] Total users: ${totalUsers}`);
     console.log(`[Dashboard] Recent attacks returned: ${recentAttacksCount}`);
+    console.log(`[Dashboard] Total IPs: ${totalIPs}`);
+    console.log(`[Dashboard] Blacklisted IPs: ${blacklistedIPs}`);
+    console.log(`[Dashboard] High Threat IPs (threat_score >= 70): ${highThreatIPs}`);
+    console.log(`[Dashboard] Active Alerts: ${activeAlerts}`);
     
     // Log some sample attack dates for debugging
     if (recentAttacks.length > 0) {
@@ -202,6 +214,20 @@ exports.getDashboardOverview = async (req, res) => {
         date: a.date,
         type: a.type
       })));
+    }
+    
+    // Debug: Log some IP data to verify blacklist status
+    if (totalIPs > 0) {
+      const sampleIPs = await IP.find({}).limit(5).select('ip_address is_blacklisted threat_score').lean();
+      console.log(`[Dashboard] Sample IPs:`, sampleIPs);
+    }
+    
+    // Debug: Log some alert data to verify status
+    const sampleAlerts = await Alert.find({}).limit(5).select('status severity').lean();
+    if (sampleAlerts.length > 0) {
+      console.log(`[Dashboard] Sample Alerts:`, sampleAlerts);
+    } else {
+      console.log(`[Dashboard] No alerts found in database`);
     }
 
     // Format response
