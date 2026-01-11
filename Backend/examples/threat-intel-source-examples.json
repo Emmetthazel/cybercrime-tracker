@@ -1,0 +1,123 @@
+[
+  {
+    "name": "AbuseIPDB Blacklist",
+    "display_name": "AbuseIPDB Blacklist Feed",
+    "type": "API",
+    "category": "IP Reputation",
+    "api_endpoint": "https://api.abuseipdb.com/api/v2/blacklist",
+    "api_key": "YOUR_ABUSEIPDB_API_KEY",
+    "authentication_method": "API_KEY",
+    "sync_enabled": true,
+    "sync_interval": 3600,
+    "configuration": {
+      "default_params": {
+        "confidenceMinimum": 75,
+        "limit": 10000
+      },
+      "timeout": 30000,
+      "headers": {
+        "Accept": "application/json"
+      }
+    },
+    "data_mapping": {
+      "source_ip": "ipAddress",
+      "type": "category",
+      "severity": "abuseConfidenceScore",
+      "description": "description",
+      "date": "lastReportedAt"
+    },
+    "filters": {
+      "min_confidence_score": 75
+    }
+  },
+  {
+    "name": "VirusTotal Intelligence",
+    "display_name": "VirusTotal Intelligence Feed",
+    "type": "API",
+    "category": "Threat Intelligence",
+    "api_endpoint": "https://www.virustotal.com/api/v3/intelligence/search",
+    "api_key": "YOUR_VIRUSTOTAL_API_KEY",
+    "authentication_method": "API_KEY",
+    "sync_enabled": true,
+    "sync_interval": 7200,
+    "configuration": {
+      "default_params": {
+        "query": "type:ip tag:malware"
+      },
+      "timeout": 30000,
+      "headers": {
+        "x-apikey": "YOUR_VIRUSTOTAL_API_KEY"
+      }
+    },
+    "data_mapping": {
+      "source_ip": "attributes.ip_address",
+      "type": "attributes.type",
+      "severity": "attributes.reputation",
+      "description": "attributes.description",
+      "date": "attributes.last_analysis_date"
+    }
+  },
+  {
+    "name": "OTX Pulses",
+    "display_name": "AlienVault OTX Pulses",
+    "type": "API",
+    "category": "Threat Intelligence",
+    "api_endpoint": "https://otx.alienvault.com/api/v1/pulses/subscribed",
+    "api_key": "YOUR_OTX_API_KEY",
+    "authentication_method": "API_KEY",
+    "sync_enabled": true,
+    "sync_interval": 3600,
+    "configuration": {
+      "default_params": {
+        "limit": 100
+      },
+      "timeout": 30000,
+      "headers": {
+        "X-OTX-API-KEY": "YOUR_OTX_API_KEY"
+      }
+    },
+    "data_mapping": {
+      "source_ip": "indicators.0.indicator",
+      "type": "tags.0",
+      "severity": "pulse_info.count",
+      "description": "description",
+      "date": "created",
+      "tags": "tags"
+    }
+  },
+  {
+    "name": "Custom Threat Feed",
+    "display_name": "Custom Threat Intelligence Feed",
+    "type": "API",
+    "category": "Custom",
+    "api_endpoint": "https://api.example.com/threats",
+    "api_key": "YOUR_API_KEY",
+    "authentication_method": "Bearer",
+    "sync_enabled": true,
+    "sync_interval": 1800,
+    "configuration": {
+      "default_params": {
+        "format": "json",
+        "limit": 500
+      },
+      "timeout": 30000,
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json"
+      }
+    },
+    "data_mapping": {
+      "source_ip": "source.ip",
+      "target_country": "target.country",
+      "type": "threat.type",
+      "severity": "threat.severity",
+      "description": "threat.description",
+      "date": "timestamp",
+      "tags": "threat.tags"
+    },
+    "filters": {
+      "min_confidence_score": 60,
+      "countries": ["US", "CN", "RU"]
+    }
+  }
+]

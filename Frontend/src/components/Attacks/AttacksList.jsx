@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../Common/Layout';
@@ -18,15 +18,11 @@ const AttacksList = () => {
   const [filters, setFilters] = useState({
     type: '',
     severity: '',
-    status: ''
+    status: '',
+    source: '' // Filter by source: Manual Report, API Sync, Automated Detection
   });
 
-  useEffect(() => {
-    loadAttacks();
-  }, [page, filters]);
-
-
-  const loadAttacks = async () => {
+  const loadAttacks = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -48,7 +44,11 @@ const AttacksList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters, searchQuery]);
+
+  useEffect(() => {
+    loadAttacks();
+  }, [loadAttacks]);
 
   const handleDelete = async (attackId, attackType) => {
     if (!window.confirm(`Are you sure you want to delete this attack: ${attackType}?`)) {
@@ -68,7 +68,7 @@ const AttacksList = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
-    loadAttacks();
+    // loadAttacks will be called by useEffect when page changes
   };
 
   const canEdit = (attack) => {
@@ -170,6 +170,15 @@ const AttacksList = () => {
               <option value="Mitigated">Mitigated</option>
               <option value="Resolved">Resolved</option>
             </select>
+            <select
+              value={filters.source}
+              onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+            >
+              <option value="">All Sources</option>
+              <option value="Manual Report">Manual Reports</option>
+              <option value="API Sync">Auto (API Sync)</option>
+              <option value="Automated Detection">Automated Detection</option>
+            </select>
           </div>
         </div>
 
@@ -205,6 +214,11 @@ const AttacksList = () => {
                   <tr key={attack._id}>
                     <td>
                       <span className="attack-type">{attack.type}</span>
+                      {attack.source === 'API Sync' && (
+                        <span className="badge-auto" title="Automatically created from Threat Intelligence API">
+                          🤖 Auto
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className={`severity-badge severity-${attack.severity?.toLowerCase()}`}>

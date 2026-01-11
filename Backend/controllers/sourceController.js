@@ -1,5 +1,8 @@
 const Source = require('../models/Source');
+const Attack = require('../models/Attack');
 const AuditLog = require('../models/AuditLog');
+const threatIntelIngestionService = require('../services/threatIntelIngestionService');
+const dataSyncService = require('../services/dataSyncService');
 
 // Get all sources
 exports.getAllSources = async (req, res) => {
@@ -7,7 +10,24 @@ exports.getAllSources = async (req, res) => {
     const sources = await Source.find()
       .sort({ name: 1 });
 
-    res.json(sources);
+    // Enrichir chaque source avec le nombre réel d'incidents créés
+    const sourcesWithStats = await Promise.all(
+      sources.map(async (source) => {
+        const sourceObj = source.toObject();
+        // Compter les incidents créés par cette source
+        const incidentCount = await Attack.countDocuments({ 
+          source_id: source._id,
+          source: 'API Sync'
+        });
+        // Utiliser le nombre réel si records_collected est 0 ou inférieur
+        if (incidentCount > 0 && (!sourceObj.records_collected || sourceObj.records_collected < incidentCount)) {
+          sourceObj.records_collected = incidentCount;
+        }
+        return sourceObj;
+      })
+    );
+
+    res.json(sourcesWithStats);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -111,7 +131,7 @@ exports.deleteSource = async (req, res) => {
   }
 };
 
-// Sync source (placeholder for actual sync logic)
+// Sync source - synchronise une source spécifique
 exports.syncSource = async (req, res) => {
   try {
     const source = await Source.findById(req.params.id);
@@ -124,24 +144,100 @@ exports.syncSource = async (req, res) => {
       return res.status(400).json({ message: 'Source sync is disabled' });
     }
 
-    // Update sync status
-    source.sync_status = 'In Progress';
-    source.last_sync = new Date();
-    await source.save();
+    if (req.user) {
+      await AuditLog.create({
+        action: 'SYNC',
+        resource_type: 'Source',
+        resource_id: source._id,
+        user_id: req.user._id,
+        username: req.user.username,
+        ip_address: req.ip,
+        description: `Manual sync initiated for source: ${source.name}`
+      });
+    }
 
-    // TODO: Implement actual sync logic here
-    // This would call external APIs and update the database
+    // Lancer la synchronisation de manière asynchrone
+    const syncPromise = threatIntelIngestionService.syncSource(req.params.id);
+    
+    // Retourner immédiatement pour ne pas bloquer la requête
+    res.json({ 
+      message: 'Source sync initiated', 
+      source: {
+        id: source._id,
+        name: source.name,
+        status: 'In Progress'
+      }
+    });
 
-    // Simulate sync completion
-    setTimeout(async () => {
-      source.sync_status = 'Success';
-      source.total_syncs += 1;
-      source.successful_syncs += 1;
-      source.next_sync = new Date(Date.now() + source.sync_interval * 1000);
-      await source.save();
-    }, 1000);
+    // Attendre la fin de la synchronisation en arrière-plan
+    syncPromise.then(result => {
+      console.log(`Sync completed for source ${source.name}:`, result);
+    }).catch(error => {
+      console.error(`Sync failed for source ${source.name}:`, error);
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    res.json({ message: 'Source sync initiated', source });
+// Sync all sources
+exports.syncAllSources = async (req, res) => {
+  try {
+    if (req.user) {
+      await AuditLog.create({
+        action: 'SYNC_ALL',
+        resource_type: 'Source',
+        user_id: req.user._id,
+        username: req.user.username,
+        ip_address: req.ip,
+        description: 'Manual sync all sources initiated'
+      });
+    }
+
+    // Lancer la synchronisation de manière asynchrone
+    const syncPromise = dataSyncService.syncAllSources();
+    
+    // Retourner immédiatement pour ne pas bloquer
+    res.json({ 
+      message: 'Sync all sources initiated',
+      status: 'In Progress'
+    });
+
+    // Attendre la fin en arrière-plan et logger les résultats
+    syncPromise.then(result => {
+      console.log('Sync all sources completed:', {
+        total: result.total,
+        successful: result.results.filter(r => r.success).length,
+        failed: result.results.filter(r => !r.success).length
+      });
+    }).catch(error => {
+      console.error('Sync all sources failed:', error.message);
+      // L'erreur est déjà loggée, on ne renvoie pas d'erreur HTTP car la requête a déjà répondu
+    });
+  } catch (error) {
+    console.error('Error initiating sync all sources:', error);
+    res.status(500).json({ 
+      message: 'Failed to initiate sync',
+      error: error.message 
+    });
+  }
+};
+
+// Get ingestion statistics
+exports.getIngestionStats = async (req, res) => {
+  try {
+    const stats = await threatIntelIngestionService.getIngestionStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get active sources
+exports.getActiveSources = async (req, res) => {
+  try {
+    const sources = await threatIntelIngestionService.getActiveSources();
+    res.json(sources);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

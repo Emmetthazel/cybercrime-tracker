@@ -6,7 +6,10 @@ const {
   createSource,
   updateSource,
   deleteSource,
-  syncSource
+  syncSource,
+  syncAllSources,
+  getIngestionStats,
+  getActiveSources
 } = require('../controllers/sourceController');
 const { authenticate, hasPermission } = require('../middleware/auth');
 
@@ -19,6 +22,11 @@ router.post('/', authenticate, hasPermission('sources:write'), createSource);
 router.put('/:id', authenticate, hasPermission('sources:update'), updateSource);
 router.delete('/:id', authenticate, hasPermission('sources:delete'), deleteSource);
 router.post('/:id/sync', authenticate, hasPermission('sources:update'), syncSource);
+router.post('/sync/all', authenticate, hasPermission('sources:update'), syncAllSources);
+
+// Statistics and monitoring
+router.get('/stats/ingestion', authenticate, getIngestionStats);
+router.get('/stats/active', authenticate, getActiveSources);
 
 module.exports = router;
 

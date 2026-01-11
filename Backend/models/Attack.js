@@ -109,6 +109,7 @@ const attackSchema = new mongoose.Schema({
     enum: ['Manual Report', 'API Sync', 'Automated Detection'],
     default: 'Manual Report'
   },
+  source_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Source' }, // Lien vers la source de Threat Intelligence
   source_reliability: {
     type: String,
     enum: ['A', 'B', 'C'],
@@ -144,6 +145,7 @@ attackSchema.index({ created_at: -1 });
 attackSchema.index({ severity_score: -1 });
 attackSchema.index({ target_country: 1, type: 1, date: -1 });
 attackSchema.index({ description: 'text', attack_vector: 'text', tags: 'text' });
+attackSchema.index({ source_id: 1 }); // Index pour les requêtes par source
 
 // Middleware pour mettre à jour updated_at
 attackSchema.pre('save', function(next) {

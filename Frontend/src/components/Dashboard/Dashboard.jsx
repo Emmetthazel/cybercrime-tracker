@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import Layout from '../Common/Layout';
 import { dashboardService } from '../../services/dashboardService';
 import AttackStats from './AttackStats';
@@ -188,17 +187,6 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
     </Layout>
   );
 };

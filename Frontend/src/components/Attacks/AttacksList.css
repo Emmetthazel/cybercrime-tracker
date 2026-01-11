@@ -159,6 +159,17 @@
   color: #333;
 }
 
+.badge-auto {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .severity-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;

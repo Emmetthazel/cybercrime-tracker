@@ -8,6 +8,9 @@ import UserManagement from './components/Users/UserManagement';
 import ReportAttack from './components/Attacks/ReportAttack';
 import AttacksList from './components/Attacks/AttacksList';
 import AttackDetail from './components/Attacks/AttackDetail';
+import ThreatIntelSources from './components/Sources/ThreatIntelSources';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -20,6 +23,17 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -75,6 +89,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <ReportAttack />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/sources"
+              element={
+                <PrivateRoute>
+                  <ThreatIntelSources />
                 </PrivateRoute>
               }
             />

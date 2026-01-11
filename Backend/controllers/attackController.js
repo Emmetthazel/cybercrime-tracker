@@ -15,6 +15,7 @@ exports.getAllAttacks = async (req, res) => {
       status,
       target_country,
       source_ip,
+      source,
       start_date,
       end_date,
       search
@@ -27,6 +28,7 @@ exports.getAllAttacks = async (req, res) => {
     if (status) query.status = status;
     if (target_country) query.target_country = target_country;
     if (source_ip) query.source_ip = source_ip;
+    if (source) query.source = source;
     if (start_date || end_date) {
       query.date = {};
       if (start_date) query.date.$gte = new Date(start_date);
