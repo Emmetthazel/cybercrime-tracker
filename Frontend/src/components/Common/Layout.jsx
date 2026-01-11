@@ -18,6 +18,7 @@ const Layout = ({ children }) => {
     { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin', 'analyst', 'user', 'viewer'] },
     { path: '/attacks', label: 'Attacks', icon: '⚔️', roles: ['admin', 'analyst', 'user', 'viewer'] },
     { path: '/search', label: 'Search', icon: '🔍', roles: ['admin', 'analyst', 'user', 'viewer'] },
+    { path: '/check-ip', label: 'Check IP', icon: '🔍', roles: ['admin', 'analyst', 'user'] },
     { path: '/sources', label: 'Threat Intel', icon: '🕵️', roles: ['admin', 'analyst'] },
     // Only admin can manage users
     ...(user?.role === 'admin' ? [{ path: '/users', label: 'Users', icon: '👥', roles: ['admin'] }] : []),

@@ -9,6 +9,7 @@ import ReportAttack from './components/Attacks/ReportAttack';
 import AttacksList from './components/Attacks/AttacksList';
 import AttackDetail from './components/Attacks/AttackDetail';
 import ThreatIntelSources from './components/Sources/ThreatIntelSources';
+import IPChecker from './components/IPs/IPChecker';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -97,6 +98,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <ThreatIntelSources />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/check-ip"
+              element={
+                <PrivateRoute>
+                  <IPChecker />
                 </PrivateRoute>
               }
             />

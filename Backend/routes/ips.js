@@ -8,7 +8,8 @@ const {
   updateIP,
   deleteIP,
   getTopDangerousIPs,
-  enrichIP
+  enrichIP,
+  checkIP
 } = require('../controllers/ipController');
 const { authenticate, hasPermission } = require('../middleware/auth');
 const { ipValidation, validate } = require('../middleware/validation');
@@ -24,6 +25,7 @@ router.post('/', authenticate, hasPermission('ips:write'), ipValidation, validat
 router.put('/:id', authenticate, hasPermission('ips:update'), updateIP);
 router.delete('/:id', authenticate, hasPermission('ips:delete'), deleteIP);
 router.post('/:id/enrich', authenticate, hasPermission('ips:update'), enrichIP);
+router.post('/check', authenticate, hasPermission('ips:write'), checkIP); // Option A from ChatGPT: Manual IP check
 
 module.exports = router;
 

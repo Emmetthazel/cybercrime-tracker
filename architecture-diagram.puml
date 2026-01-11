@@ -1,0 +1,286 @@
+@startuml Architecture_Cybercrime_Tracker_Complete
+!theme plain
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam defaultFontSize 10
+skinparam packageStyle rectangle
+
+title Architecture Globale du Système - Cybercrime Tracker\n(Architecture Polyglotte MongoDB + Neo4j)
+
+' ============================================
+' CLIENT LAYER
+' ============================================
+package "Client Layer" {
+  component [Frontend React] as Frontend
+  component [Dashboard UI] as DashboardUI
+  component [Attacks Management] as AttacksUI
+  component [IP Checker] as IPCheckerUI
+  component [Threat Intel Sources] as SourcesUI
+  component [Graph Visualization] as GraphUI
+  component [Search & Filter] as SearchUI
+  
+  Frontend --> DashboardUI
+  Frontend --> AttacksUI
+  Frontend --> IPCheckerUI
+  Frontend --> SourcesUI
+  Frontend --> GraphUI
+  Frontend --> SearchUI
+  
+  note right of Frontend
+    **Technologies:**
+    - React.js + Hooks
+    - React Router
+    - Axios (HTTP Client)
+    - Chart.js / Recharts
+    - React-Toastify
+    
+    **Fonctionnalités:**
+    - Interface utilisateur responsive
+    - Authentification JWT
+    - Visualisation interactive
+    - Gestion d'état (Context API)
+  end note
+}
+
+' ============================================
+' API LAYER
+' ============================================
+package "API Layer (Express.js)" {
+  component [Express Server] as Server
+  component [CORS Middleware] as CORS
+  component [Helmet Security] as Helmet
+  component [Rate Limiting] as RateLimit
+  
+  package "Routes" {
+    component [/api/attacks] as RouteAttacks
+    component [/api/ips] as RouteIPs
+    component [/api/users] as RouteUsers
+    component [/api/dashboard] as RouteDashboard
+    component [/api/sources] as RouteSources
+    component [/api/reports] as RouteReports
+    component [/api/alerts] as RouteAlerts
+    component [/api/graph] as RouteGraph
+    component [/api/search] as RouteSearch
+  }
+  
+  package "Middleware" {
+    component [Auth Middleware] as AuthMW
+    component [Role Permissions] as RoleMW
+    component [Validation] as ValidationMW
+    component [Error Handler] as ErrorMW
+  }
+  
+  Server --> CORS
+  Server --> Helmet
+  Server --> RateLimit
+}
+
+' ============================================
+' BUSINESS LOGIC LAYER
+' ============================================
+package "Business Logic Layer" {
+  package "Controllers (MVC)" {
+    component [Attack Controller] as AttackCtrl
+    component [IP Controller] as IPCtrl
+    component [User Controller] as UserCtrl
+    component [Dashboard Controller] as DashboardCtrl
+    component [Source Controller] as SourceCtrl
+    component [Report Controller] as ReportCtrl
+    component [Alert Controller] as AlertCtrl
+    component [Graph Controller] as GraphCtrl
+    component [Search Controller] as SearchCtrl
+  }
+  
+  package "Services" {
+    component [Data Sync Service] as DataSyncSvc
+    component [External API Service] as ExtAPISvc
+    component [Threat Intel Ingestion] as ThreatIntelSvc
+    component [Neo4j Service] as Neo4jSvc
+    component [Graph Sync Service] as GraphSyncSvc
+    component [Search Service] as SearchSvc
+  }
+  
+  package "Background Jobs" {
+    component [Automatic Ingestion\nScheduler] as Scheduler
+    note right of Scheduler
+      **Fonctionnalités:**
+      - Synchronisation périodique
+      - Intervalle configurable
+      - Gestion des erreurs
+      - Retry automatique
+    end note
+  }
+}
+
+' ============================================
+' DATA LAYER
+' ============================================
+package "Data Layer" {
+  database "MongoDB\n(NoSQL Document Store)" as MongoDB {
+    component [Attack Collection] as AttackColl
+    component [IP Collection] as IPColl
+    component [User Collection] as UserColl
+    component [Source Collection] as SourceColl
+    component [ThreatIntel Collection] as TIColl
+    component [Vulnerability Collection] as VulnColl
+    component [Report Collection] as ReportColl
+    component [Alert Collection] as AlertColl
+    component [AuditLog Collection] as AuditColl
+  }
+  
+  note right of MongoDB
+    **ODM:** Mongoose
+    **Indexes:** 
+    - Text search
+    - Geospatial
+    - Compound indexes
+    **Volume estimé:**
+    - 1.5M+ documents
+  end note
+  
+  database "Neo4j\n(Graph Database)" as Neo4j {
+    component [Attack Nodes] as AttackNode
+    component [IP Nodes] as IPNode
+    component [User Nodes] as UserNode
+    component [Vulnerability Nodes] as VulnNode
+    component [TI Nodes] as TINode
+    component [Relationships] as Rel
+  }
+  
+  note right of Neo4j
+    **Driver:** neo4j-driver
+    **Query Language:** Cypher
+    **Use Cases:**
+    - Campaign detection
+    - Network analysis
+    - Path queries
+    - Relationship traversal
+  end note
+}
+
+' ============================================
+' EXTERNAL SERVICES
+' ============================================
+package "External Threat Intelligence APIs" {
+  component [VirusTotal API] as VT
+  component [AbuseIPDB API] as Abuse
+  component [Shodan API] as Shodan
+  component [OTX API] as OTX
+  
+  note right of VT
+    **Services externes:**
+    - Enrichissement IP
+    - Threat Intelligence feeds
+    - Reputation scoring
+    - Malware detection
+  end note
+}
+
+' ============================================
+' CONFIGURATION
+' ============================================
+package "Configuration" {
+  component [Config Manager] as Config
+  component [DB Config] as DBConfig
+  component [Neo4j Config] as Neo4jConfig
+  component [JWT Config] as JWTConfig
+  component [API Keys] as APIKeys
+  
+  Config --> DBConfig
+  Config --> Neo4jConfig
+  Config --> JWTConfig
+  Config --> APIKeys
+}
+
+' ============================================
+' CONNECTIONS - CLIENT TO API
+' ============================================
+Frontend --> Server : HTTP/REST\n(JSON, Port 3000 → 5000)
+Server --> CORS : Enable CORS
+Server --> Helmet : Security Headers
+Server --> RateLimit : Rate Limiting
+
+' ============================================
+' CONNECTIONS - API TO CONTROLLERS
+' ============================================
+RouteAttacks --> AuthMW : Authenticate JWT
+RouteAttacks --> RoleMW : Check Permissions
+RouteAttacks --> ValidationMW : Validate Input
+RouteAttacks --> ErrorMW : Handle Errors
+
+RouteAttacks --> AttackCtrl
+RouteIPs --> IPCtrl
+RouteUsers --> UserCtrl
+RouteDashboard --> DashboardCtrl
+RouteSources --> SourceCtrl
+RouteReports --> ReportCtrl
+RouteAlerts --> AlertCtrl
+RouteGraph --> GraphCtrl
+RouteSearch --> SearchCtrl
+
+' ============================================
+' CONNECTIONS - CONTROLLERS TO SERVICES
+' ============================================
+AttackCtrl --> DataSyncSvc
+AttackCtrl --> GraphSyncSvc
+IPCtrl --> ExtAPISvc
+IPCtrl --> DataSyncSvc
+IPCtrl --> GraphSyncSvc
+UserCtrl --> AuthMW
+DashboardCtrl --> SearchSvc
+SourceCtrl --> ThreatIntelSvc
+GraphCtrl --> Neo4jSvc
+SearchCtrl --> SearchSvc
+
+' ============================================
+' CONNECTIONS - SERVICES TO DATA
+' ============================================
+DataSyncSvc --> MongoDB : CRUD Operations\n(Mongoose ODM)
+DataSyncSvc --> ExtAPISvc : Enrichment
+GraphSyncSvc --> MongoDB : Read Documents
+GraphSyncSvc --> Neo4j : Write Nodes & Relations
+Neo4jSvc --> Neo4j : Cypher Queries\n(Graph Traversal)
+SearchSvc --> MongoDB : Text Search\n(Aggregation)
+
+' ============================================
+' CONNECTIONS - SERVICES TO EXTERNAL APIs
+' ============================================
+ExtAPISvc --> VT : Threat Intelligence\n(HTTP GET/POST)
+ExtAPISvc --> Abuse : IP Reputation\n(HTTP GET)
+ExtAPISvc --> Shodan : IP Scanning\n(HTTP GET)
+ExtAPISvc --> OTX : Threat Feeds\n(HTTP GET)
+
+' ============================================
+' CONNECTIONS - BACKGROUND JOBS
+' ============================================
+Scheduler --> ThreatIntelSvc : Periodic Sync\n(setInterval)
+ThreatIntelSvc --> DataSyncSvc : Transform & Create
+ThreatIntelSvc --> ExtAPISvc : Fetch Feeds
+
+' ============================================
+' CONNECTIONS - CONFIGURATION
+' ============================================
+Server --> Config : Load Configuration
+DBConfig --> MongoDB : Connection String
+Neo4jConfig --> Neo4j : Connection Credentials
+APIKeys --> ExtAPISvc : API Keys
+
+' ============================================
+' DATA FLOW ANNOTATIONS
+' ============================================
+MongoDB ..> Neo4j : Synchronisation\n(Documents → Nodes & Relations)
+Neo4j ..> MongoDB : Query Results\n(IDs → Full Documents)
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  |<#LightBlue> **MongoDB** | Stockage des documents |
+  |<#LightGreen> **Neo4j** | Stockage des relations |
+  |<#LightYellow> **External APIs** | Enrichissement des données |
+  |<#LightCoral> **Services** | Logique métier |
+  |<#LightGray> **Controllers** | Gestion des requêtes |
+  |<#MistyRose> **Middleware** | Sécurité & Validation |
+endlegend
+
+@enduml

@@ -211,6 +211,7 @@ class DataSyncService {
 
   /**
    * Transformation par défaut selon le type de source
+   * Applique des règles intelligentes spécifiques à chaque API
    */
   defaultTransform(data, sourceName, sourceType) {
     const transformed = [];
@@ -230,6 +231,18 @@ class DataSyncService {
       items = [data];
     }
 
+    // Transformation spécifique selon la source
+    if (sourceName && sourceName.toLowerCase().includes('shodan')) {
+      return this.transformShodanData(items);
+    } else if (sourceName && sourceName.toLowerCase().includes('abuseipdb')) {
+      return this.transformAbuseIPDBData(items);
+    } else if (sourceName && sourceName.toLowerCase().includes('virustotal')) {
+      return this.transformVirusTotalData(items);
+    } else if (sourceName && sourceName.toLowerCase().includes('otx')) {
+      return this.transformOTXData(items);
+    }
+
+    // Transformation générique par défaut
     for (const item of items) {
       transformed.push({
         // Champs standardisés
@@ -247,6 +260,249 @@ class DataSyncService {
     }
 
     return transformed;
+  }
+
+  /**
+   * Transformation spécifique pour Shodan
+   * Applique des règles : ports sensibles, vulnérabilités, etc.
+   */
+  transformShodanData(items) {
+    const transformed = [];
+    const sensitivePorts = [22, 23, 3389, 445, 1433, 3306, 5432, 27017]; // SSH, Telnet, RDP, SMB, SQL, etc.
+
+    for (const item of items) {
+      const ip = item.ip_str || item.ip || item.ip_address;
+      if (!ip) continue;
+
+      const ports = item.ports || [];
+      const vulns = item.vulns ? Object.keys(item.vulns) : [];
+      const openPortsCount = ports.length;
+
+      // Règles de transformation (comme suggéré par ChatGPT)
+      let type = 'Other';
+      let severity = 'Low';
+      let description = `Shodan scan for ${ip}`;
+      const tags = [];
+
+      // Règle 1: Vulnérabilités CVE détectées = High severity
+      if (vulns.length > 0) {
+        type = 'Exploit';
+        severity = 'High';
+        description = `Vulnerabilities detected on ${ip}: ${vulns.slice(0, 3).join(', ')}`;
+        tags.push('cve', 'vulnerability', 'exploit');
+      }
+      // Règle 2: Ports sensibles ouverts = Medium severity
+      else if (ports.some(port => sensitivePorts.includes(port))) {
+        const sensitiveOpen = ports.filter(p => sensitivePorts.includes(p));
+        type = 'Exposed Services';
+        severity = 'Medium';
+        description = `Sensitive ports open on ${ip}: ${sensitiveOpen.join(', ')}`;
+        tags.push('exposed_services', 'sensitive_ports');
+      }
+      // Règle 3: Beaucoup de ports ouverts = Suspicious
+      else if (openPortsCount > 10) {
+        type = 'Suspicious Activity';
+        severity = 'Medium';
+        description = `Multiple ports open on ${ip} (${openPortsCount} ports)`;
+        tags.push('multiple_ports', 'suspicious');
+      }
+      // Règle 4: Service spécifique détecté
+      else if (item.product || item.org) {
+        type = 'Information Disclosure';
+        severity = 'Low';
+        description = `Service information exposed: ${item.product || 'Unknown'} (${item.org || 'Unknown org'})`;
+        tags.push('information_disclosure');
+      }
+
+      transformed.push({
+        source_ip: ip,
+        target_country: item.country_name || null,
+        type,
+        severity,
+        description,
+        date: item.last_update ? new Date(item.last_update) : new Date(),
+        tags: [...tags, ...(item.tags || [])],
+        confidence_level: vulns.length > 0 ? 85 : (openPortsCount > 5 ? 60 : 40),
+        raw_data: item,
+        // Informations supplémentaires pour Shodan
+        forensics_data: {
+          open_ports: ports,
+          vulnerabilities: vulns,
+          services: item.data || [],
+          organization: item.org || null
+        }
+      });
+    }
+
+    return transformed;
+  }
+
+  /**
+   * Transformation spécifique pour AbuseIPDB
+   */
+  transformAbuseIPDBData(items) {
+    const transformed = [];
+
+    for (const item of items) {
+      const ip = item.ipAddress || item.ip;
+      if (!ip) continue;
+
+      const abuseScore = item.abuseConfidenceScore || item.abuse_confidence_score || 0;
+      const totalReports = item.totalReports || item.total_reports || 0;
+      const categories = item.categories || [];
+
+      // Règles de transformation
+      let severity = 'Low';
+      let type = 'Suspicious Activity';
+      
+      if (abuseScore >= 90) {
+        severity = 'Critical';
+        type = 'Malware';
+      } else if (abuseScore >= 75) {
+        severity = 'High';
+        type = 'Phishing';
+      } else if (abuseScore >= 50) {
+        severity = 'Medium';
+        type = 'Suspicious Activity';
+      }
+
+      const categoryNames = this.mapAbuseIPDBCategories(categories);
+      const description = `AbuseIPDB reports: ${totalReports} reports, confidence ${abuseScore}%. Categories: ${categoryNames.join(', ')}`;
+
+      transformed.push({
+        source_ip: ip,
+        target_country: item.countryCode || null,
+        type,
+        severity,
+        description,
+        date: item.lastReportedAt ? new Date(item.lastReportedAt) : new Date(),
+        tags: ['abuseipdb', ...categoryNames],
+        confidence_level: abuseScore,
+        raw_data: item
+      });
+    }
+
+    return transformed;
+  }
+
+  /**
+   * Transformation spécifique pour VirusTotal
+   */
+  transformVirusTotalData(items) {
+    const transformed = [];
+
+    for (const item of items) {
+      const ip = item.ip || item.ip_address || item.indicator;
+      if (!ip) continue;
+
+      const stats = item.last_analysis_stats || item.attributes?.last_analysis_stats || {};
+      const malicious = stats.malicious || 0;
+      const suspicious = stats.suspicious || 0;
+      const total = malicious + suspicious;
+
+      // Règles de transformation
+      let severity = 'Low';
+      let type = 'Suspicious Activity';
+      
+      if (malicious >= 5) {
+        severity = 'High';
+        type = 'Malware';
+      } else if (malicious >= 2 || suspicious >= 5) {
+        severity = 'Medium';
+        type = 'Phishing';
+      }
+
+      const description = `VirusTotal: ${malicious} malicious, ${suspicious} suspicious detections for ${ip}`;
+
+      transformed.push({
+        source_ip: ip,
+        target_country: item.country || item.attributes?.country || null,
+        type,
+        severity,
+        description,
+        date: item.last_analysis_date ? new Date(item.last_analysis_date * 1000) : new Date(),
+        tags: ['virustotal', malicious > 0 ? 'malicious' : 'suspicious'],
+        confidence_level: total > 0 ? Math.min(100, (malicious * 20) + (suspicious * 10)) : 30,
+        raw_data: item
+      });
+    }
+
+    return transformed;
+  }
+
+  /**
+   * Transformation spécifique pour OTX (AlienVault)
+   */
+  transformOTXData(items) {
+    const transformed = [];
+
+    for (const item of items) {
+      const ip = item.indicator || item.ip;
+      if (!ip) continue;
+
+      const pulseCount = item.pulse_info?.count || 0;
+      const pulses = item.pulse_info?.pulses || [];
+
+      // Règles de transformation
+      let severity = 'Low';
+      let type = 'Threat Intelligence';
+      
+      if (pulseCount >= 10) {
+        severity = 'High';
+        type = 'APT';
+      } else if (pulseCount >= 5) {
+        severity = 'Medium';
+        type = 'Malware';
+      }
+
+      const threatTypes = pulses.map(p => p.name).slice(0, 3);
+      const description = `OTX: ${pulseCount} threat intelligence pulses. Threats: ${threatTypes.join(', ')}`;
+
+      transformed.push({
+        source_ip: ip,
+        target_country: null,
+        type,
+        severity,
+        description,
+        date: new Date(),
+        tags: ['otx', 'threat_intelligence', ...threatTypes],
+        confidence_level: Math.min(100, pulseCount * 10),
+        raw_data: item
+      });
+    }
+
+    return transformed;
+  }
+
+  /**
+   * Mappe les catégories AbuseIPDB vers des noms lisibles
+   */
+  mapAbuseIPDBCategories(categories) {
+    const categoryMap = {
+      3: 'Fraud Orders',
+      4: 'DDoS Attack',
+      5: 'FTP Brute-Force',
+      6: 'Ping of Death',
+      7: 'Phishing',
+      8: 'Fraud VoIP',
+      9: 'Open Proxy',
+      10: 'Web Spam',
+      11: 'Email Spam',
+      12: 'Blog Spam',
+      13: 'VPN IP',
+      14: 'Port Scan',
+      15: 'Hacking',
+      16: 'SQL Injection',
+      17: 'Spoofing',
+      18: 'Brute-Force',
+      19: 'Bad Web Bot',
+      20: 'Exploited Host',
+      21: 'Web App Attack',
+      22: 'SSH',
+      23: 'IoT Targeted'
+    };
+
+    return categories.map(cat => categoryMap[cat] || `Category ${cat}`);
   }
 
   /**
