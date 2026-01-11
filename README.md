@@ -4,11 +4,12 @@ A comprehensive platform for collecting, analyzing, and visualizing cyberattack 
 
 ## 🎯 Project Overview
 
-This platform collects and analyzes cyberattack incidents (phishing, DDoS, ransomware, etc.) from various sources and provides statistical insights including:
+This platform collects and analyzes cyberattack incidents (phishing, DDoS, ransomware, etc.) from various sources using both **manual entry** and **automatic threat intelligence ingestion**. The system provides comprehensive statistical insights including:
 - Most common attack types
 - Most affected countries  
 - Most active attacker IPs
 - Attack trends over time
+- Real-time threat intelligence from external APIs (VirusTotal, AbuseIPDB, Shodan, OTX)
 
 ## 🚀 Quick Start
 
@@ -64,6 +65,16 @@ This platform collects and analyzes cyberattack incidents (phishing, DDoS, ranso
    NEO4J_USER=neo4j
    NEO4J_PASSWORD=your_neo4j_password
    NEO4J_DATABASE=neo4j
+
+   # Threat Intelligence APIs (Optional - for automatic ingestion)
+   VIRUSTOTAL_API_KEY=your_virustotal_api_key
+   ABUSEIPDB_API_KEY=your_abuseipdb_api_key
+   SHODAN_API_KEY=your_shodan_api_key
+   OTX_API_KEY=your_otx_api_key
+
+   # Automatic Ingestion (Optional)
+   AUTO_INGESTION_ENABLED=false
+   AUTO_INGESTION_INTERVAL=60
    ```
 
    For the frontend, create a `.env` file in the `Frontend` directory:
@@ -102,14 +113,29 @@ This platform collects and analyzes cyberattack incidents (phishing, DDoS, ranso
    ```
    This will sync all existing MongoDB data to Neo4j for graph queries.
 
-8. **Start Backend Server**
+8. **Start Automatic Threat Intelligence Ingestion (Optional)**
+   
+   The system supports automatic incident creation from Threat Intelligence APIs. To enable:
+   
+   **Option A: Standalone Script (Recommended)**
+   ```bash
+   cd Backend
+   node scripts/start-automatic-ingestion.js
+   ```
+   
+   **Option B: Integrated in Server**
+   Set `AUTO_INGESTION_ENABLED=true` in `.env` to start ingestion with the backend server.
+   
+   See [`Backend/THREAT-INTELLIGENCE-INGESTION.md`](Backend/THREAT-INTELLIGENCE-INGESTION.md) for detailed setup instructions.
+
+9. **Start Backend Server**
    ```bash
    cd Backend
    npm run dev
    ```
    The backend will run on `http://localhost:5000`
 
-9. **Start Frontend**
+10. **Start Frontend**
    ```bash
    cd Frontend
    npm start
@@ -188,6 +214,8 @@ See [`UML & Documentation/NEO4J-INTEGRATION.md`](UML%20&%20Documentation/NEO4J-I
 - `POST /api/ips` - Create or update IP
 - `PUT /api/ips/:id` - Update IP
 - `DELETE /api/ips/:id` - Delete IP
+- `POST /api/ips/:id/enrich` - Enrich IP with external APIs
+- `POST /api/ips/check` - Check IP manually with Threat Intelligence APIs (creates incidents)
 
 ### Dashboard
 - `GET /api/dashboard/overview` - Get dashboard overview
@@ -202,10 +230,21 @@ See [`UML & Documentation/NEO4J-INTEGRATION.md`](UML%20&%20Documentation/NEO4J-I
 - `GET /api/graph/threat-intelligence/:id/network` - Get threat intelligence network
 - `GET /api/graph/statistics` - Get graph statistics
 
+### Threat Intelligence Sources
+- `GET /api/sources` - Get all threat intelligence sources
+- `GET /api/sources/:id` - Get source by ID
+- `POST /api/sources` - Create new source
+- `PUT /api/sources/:id` - Update source
+- `DELETE /api/sources/:id` - Delete source
+- `POST /api/sources/:id/sync` - Manually sync a specific source
+- `POST /api/sources/sync/all` - Manually sync all sources
+- `GET /api/sources/stats/ingestion` - Get ingestion statistics
+- `GET /api/sources/stats/active` - Get active sources
+
 ### Other Endpoints
-- `GET /api/sources` - Get all data sources
 - `GET /api/reports` - Get all reports
 - `GET /api/alerts` - Get all alerts
+- `GET /api/search` - Search attacks, IPs, and more
 
 ## 🔐 Authentication
 
@@ -241,13 +280,31 @@ npm test
 - ✅ Audit logging
 - ✅ Campaign detection via graph analysis
 - ✅ Network analysis and IP associations
+- ✅ **Automatic Threat Intelligence Ingestion**
+  - Integration with VirusTotal, AbuseIPDB, Shodan, OTX
+  - Configurable periodic synchronization
+  - Automatic data transformation and deduplication
+  - Custom data mapping per source
+- ✅ **Manual IP Checking**
+  - Check IPs against multiple threat intelligence sources
+  - Automatic incident creation from API responses
+  - Real-time enrichment with external APIs
 
 ### Frontend
 - ✅ React with React Router
 - ✅ Authentication context
-- ✅ Dashboard with charts
+- ✅ Dashboard with charts and statistics
 - ✅ Attack listing and filtering
 - ✅ Responsive design
+- ✅ **Threat Intelligence Source Management**
+  - View all configured sources
+  - Monitor sync status and statistics
+  - Manual sync triggers
+  - Source configuration management
+- ✅ **IP Checker Interface**
+  - Manual IP address checking
+  - Multi-source threat intelligence lookup
+  - Incident creation visualization
 
 ## 🛠️ Development
 
@@ -265,7 +322,20 @@ npm start  # Starts development server with hot reload
 
 ## 📝 Environment Variables
 
-See `.env.example` files for required environment variables.
+### Required Variables
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - Secret key for JWT tokens
+- `JWT_REFRESH_SECRET` - Secret key for refresh tokens
+
+### Optional Variables
+- `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` - Neo4j connection (for graph features)
+- `VIRUSTOTAL_API_KEY`, `ABUSEIPDB_API_KEY`, `SHODAN_API_KEY`, `OTX_API_KEY` - Threat Intelligence API keys (for automatic ingestion)
+- `AUTO_INGESTION_ENABLED` - Enable automatic ingestion (default: `false`)
+- `AUTO_INGESTION_INTERVAL` - Ingestion interval in minutes (default: `60`)
+- `PORT` - Server port (default: `5000`)
+- `CORS_ORIGIN` - CORS allowed origin (default: `http://localhost:3000`)
+
+See configuration examples in `Backend/examples/threat-intel-source-examples.json` for threat intelligence source setup.
 
 ## 🤝 Contributing
 
@@ -286,6 +356,8 @@ For detailed documentation, see:
 - `UML & Documentation/DATABASE-SCHEMA.md` - Database schema details
 - `UML & Documentation/PROJECT-STRUCTURE.md` - Project structure
 - `UML & Documentation/NEO4J-INTEGRATION.md` - Neo4j integration guide
+- `Backend/THREAT-INTELLIGENCE-INGESTION.md` - **Threat Intelligence Ingestion Guide** (automatic incident creation)
+- `Backend/examples/threat-intel-source-examples.json` - Example source configurations
 
 ## 🐛 Troubleshooting
 
@@ -307,6 +379,34 @@ For detailed documentation, see:
 ### CORS Errors
 - Update `CORS_ORIGIN` in backend `.env` to match frontend URL
 - Default: `http://localhost:3000`
+
+### Threat Intelligence Ingestion Issues
+- **API Keys**: Ensure all required API keys are set in `.env` file
+- **Source Configuration**: Verify source `sync_enabled` and `is_active` are both `true`
+- **Rate Limiting**: Increase `sync_interval` if you encounter API rate limits
+- **Logs**: Check server logs and AuditLog collection for detailed error messages
+- **Manual Sync**: Test individual sources using `POST /api/sources/:id/sync` endpoint
+
+### IP Check Not Creating Incidents
+- Verify API keys are correctly configured
+- Check server logs for API response errors
+- Ensure the IP address is valid and accessible by the APIs
+- Review incident deduplication settings (incidents within 24h window may be skipped)
+
+## 🎯 Key Capabilities
+
+### Incident Creation Modes
+1. **Manual**: Users create incidents through the web interface
+2. **Automatic**: Incidents are automatically created from Threat Intelligence APIs
+   - Configurable periodic synchronization
+   - Multiple source support (VirusTotal, AbuseIPDB, Shodan, OTX)
+   - Automatic data transformation and deduplication
+
+### IP Management
+- Manual IP checking against multiple threat intelligence sources
+- Automatic IP enrichment with external APIs
+- IP reputation scoring and categorization
+- Association detection via graph analysis (Neo4j)
 
 ## 📞 Support
 
